@@ -54,7 +54,8 @@ export class directMessageService {
     reciever: string;
   }) {
     if (!data.sender || !data.reciever) {
-      throw new Error('sender not found');
+      console.log('sender not found');
+      return;
     }
     const user = await this.prisma.user.findUnique({
       where: {

@@ -40,8 +40,8 @@ body {
   padding: 30px;
   display: flex;
   flex-wrap: wrap;
-  justify-content: start;
-  align-items: start;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .container .btn {
@@ -51,7 +51,7 @@ body {
   width: 250px;
   height: 50px;
   display: flex;
-  justify-content: start;
+  justify-content: flex-start;
   align-items: center;
   /* margin-left: -80rem; */
 }

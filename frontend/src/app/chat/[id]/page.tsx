@@ -3,7 +3,7 @@ import "./page.css";
 import ChannalAndDirectMessage from "@/components/chat/channal&MessageList/channal&directMessage";
 import ChatContent from "@/components/chat/chatContent/chatContent";
 import AdminsMembers from "@/components/chat/adminMembers/adminMembers";
-import React from "react";
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import { fetchUser } from "@/services/userServices";
 import useSWR from "swr";
@@ -17,12 +17,27 @@ export default function Chat() {
     fetchUser
   );
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
+  const [channel, setChannel] = useState("general");
+  const [isChannel, setIsChannel] = useState(false);
+
+  function switchChannelName(channelName: any) {
+    setIsDirectMessage(false);
+    setChannel(channelName);
+  }
+
+  function setChannalPageAndSavedefaultName() {
+    setIsDirectMessage(false);
+    setIsChannel(true);
+    setChannel("general");
+  }
+
 
   return (
     <div className="chat-container">
       <div className="flex h-full">
-          <ChannalAndDirectMessage user={user} />
-            <ChatContent user={user} />
+          <ChannalAndDirectMessage user={user} switchChannelName={switchChannelName} 
+          setChannalPageAndSavedefaultName={setChannalPageAndSavedefaultName}/>
+            <ChatContent user={user} channel={channel} />
         {!isDirectMessage ? (
           <>
             <AdminsMembers user={user} />
@@ -31,7 +46,6 @@ export default function Chat() {
           <div></div>
         )}
       </div>
-      {/* <div className="h-20"></div> */}
     </div>
   );
 }

@@ -459,7 +459,6 @@ export class ChatGateway {
       if (!blocked) {
         console.log('no blocked users');
       }
-      console.log('all users blocked', blocked);
       this.server.emit('getblockUser', blocked); // this will return all users
       return blocked;
     } catch (error) {

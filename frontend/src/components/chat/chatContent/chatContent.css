@@ -1,14 +1,13 @@
 
 .chat-content {
    min-width: 40%;
+   max-width: 60%;
    display: flex;
    flex-direction: column;
    flex: 1;
    overflow-y: auto;
-   margin-right: 2rem;
 }
 .list-div{
-   /* margin-left: 10rem; */
    min-width: 20%;
 }
 

@@ -5,14 +5,13 @@ import { useEffect, useState } from "react";
 import socket from "@/services/socket";
 import ListUsersFriends from "./listUsersFriends/listUsersFriends";
 import { useIsDirectMessage } from "@/store/userStore";
-import useIsChannel from "@/store/channelStore";
 import { useChannleTypeStore } from "@/store/channelStore";
 import useUsernameStore from "@/store/usernameStore";
 
-export default function ChannalAndDirectMessage({ user }: { user: any }) {
+export default function ChannalAndDirectMessage({ user, switchChannelName,setChannalPageAndSavedefaultName }: 
+  { user: any, switchChannelName: any, setChannalPageAndSavedefaultName:any }) {
 
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
-  const { isChannel, setIsChannel } = useIsChannel();
 
   const { channel, setChannel } = useChannleTypeStore();
   const [channels, setChannels] = useState<string[]>([]);
@@ -34,7 +33,6 @@ export default function ChannalAndDirectMessage({ user }: { user: any }) {
   };
 
   // todo add this to costum hook
-
   useEffect(() => {
     // Search for the username and set it in the state
     async function fetchUsername() {
@@ -82,17 +80,6 @@ export default function ChannalAndDirectMessage({ user }: { user: any }) {
       });
     }
   }, [username]);
-
-  function switchChannelName(channelName: any) {
-    setIsDirectMessage(false);
-    setChannel(channelName);
-  }
-
-  function setChannalPageAndSavedefaultName() {
-    setIsDirectMessage(false);
-    setIsChannel(true);
-    setChannel("general");
-  }
 
   const InviteToChannel = (channelName: any, friend: string) => {
     setInvite(!invite);
@@ -220,11 +207,6 @@ export default function ChannalAndDirectMessage({ user }: { user: any }) {
         </div>
         <ListUsersFriends username={username} />
       </div>
-      {/* <button
-         className="bg-red-500 hover:bg-red-700 text-white font-thin px-20 ml-6 rounded-full py-2 "
-         >
-          leave channel
-         </button> */}
     </div>
   );
 }
