@@ -34,7 +34,6 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   const { messages, setMessages} = useMessageStore();
   const [arrayMessages, setArrayMessages] = useState<any>([]);
   const [isBlockUser, setBlockUser] = useState(false);
-  const [refresh, setRefresh] = useState(false);
 
   
   
@@ -62,8 +61,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   //----------- send message ----------------
 
   const sendMessage = () => {
-    // Send the message input to the server
-    setRefresh(!refresh);    
+    // Send the message input to the serv    
     if (messageInput === "") return;
     
     if (!isDirectMessage) {
@@ -114,7 +112,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
             socket.off("listChannelMessages");
           }
         } else {
-          setRefresh(!refresh);
+
           if (username === user?.username) {
             setSenderMessages(data.msg);
             setAvaterUser(data.msg[0].user.avatarUrl);
@@ -172,7 +170,6 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
         reciever: reciever,
       });
       socket.on("listDirectMessages", (data) => {
-        setRefresh(!refresh);
         let userNameOfReciever = data.msg[0].receiver.username;
         let userNameOfsender = data.msg[0].sender.username;
         userNameOfReciever === username ? setMessages(data.msg) : null;
@@ -205,20 +202,13 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
     }
   } , [
     isDirectMessage,
-    refresh,
-    reciever,
-    username,
     channel,
-    isBlockUser,
+    arrayMessages,
+    senderMessages,
+    recieverMessages,
     ]);
 
-    //todo: hna fin wsalt 
-    // FIXME: 9AD CODE BACH MYB9ACH T9IL 
-
-
   const handleKeyDown = (e: any) => {
-    console.log("refresh", refresh);
-    setRefresh(!refresh);
     if (e.key === 'Enter') {
       e.preventDefault(); // Prevents the default behavior (e.g., new line) for the Enter key
       sendMessage();
