@@ -120,7 +120,6 @@ export default function ListUsersFriends({ username }: { username: any }) {
   const saveReceiverName = (username: string) => {
     setReciever(username);
     setIsDirectMessage(true);
-    // alert(username)
     socket.emit("listDirectMessages", { sender: username, reciever: reciever });
     socket.on("listDirectMessages", (data) => {
       setMessages(data);

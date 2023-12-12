@@ -8,16 +8,48 @@ import { useIsDirectMessage } from "@/store/userStore";
 import { useChannleTypeStore } from "@/store/channelStore";
 import useUsernameStore from "@/store/usernameStore";
 
-export default function ChannalAndDirectMessage({ user, switchChannelName,setChannalPageAndSavedefaultName }: 
+export default function ChannalAndDirectMessage({ user, switchChannelName, setChannalPageAndSavedefaultName }: 
   { user: any, switchChannelName: any, setChannalPageAndSavedefaultName:any }) {
 
-  const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
+    const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
+    
+    const { channel, setChannel } = useChannleTypeStore();
+    const [channels, setChannels] = useState<string[]>([]);
+    const {username, setUsername} =  useUsernameStore();
+    const [invite, setInvite] = useState(false);
+    const [users, setUsers] = useState<any[]>([]);
+    const [inviteToChannel, setInviteToChannel] = useState([]);
+    
+    // todo: add this to costum hook
+    useEffect(() => {
+      // Search for the username and set it in the state
+      async function fetchUsername() {
+        const storedUserData = sessionStorage.getItem("user-store");
+        if (storedUserData) {
+          try {
+            // Parse the stored data as JSON
+            const userData = await JSON.parse(storedUserData);
+  
+            // Access the username property
+            const saveusername = userData.state.user.username;
+  
+            setUsername(saveusername);
+          } catch (error) {
+            console.error("Error parsing stored data:", error);
+          }
+        } else {
+          console.warn("User data not found in session storage.");
+        }
+      }
+  
+      fetchUsername(); // Fetch the username
+  
+      // Return a cleanup function if needed (e.g., to unsubscribe from listeners)
+      return () => {
+        // Clean up any event listeners or subscriptions
+      };
+    }, []); // Empty dependency array to run this effect only once
 
-  const { channel, setChannel } = useChannleTypeStore();
-  const [channels, setChannels] = useState<string[]>([]);
-  const {username, setUsername} =  useUsernameStore();
-  const [invite, setInvite] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
 
   // This function will be passed as a prop to Child1
   const addChannel = (channelName: any) => {
@@ -32,37 +64,8 @@ export default function ChannalAndDirectMessage({ user, switchChannelName,setCha
     }
   };
 
-  // todo add this to costum hook
-  useEffect(() => {
-    // Search for the username and set it in the state
-    async function fetchUsername() {
-      const storedUserData = sessionStorage.getItem("user-store");
-      if (storedUserData) {
-        try {
-          // Parse the stored data as JSON
-          const userData = await JSON.parse(storedUserData);
-
-          // Access the username property
-          const saveusername = userData.state.user.username;
-
-          setUsername(saveusername);
-        } catch (error) {
-          console.error("Error parsing stored data:", error);
-        }
-      } else {
-        console.warn("User data not found in session storage.");
-      }
-    }
-
-    fetchUsername(); // Fetch the username
-
-    // Return a cleanup function if needed (e.g., to unsubscribe from listeners)
-    return () => {
-      // Clean up any event listeners or subscriptions
-    };
-  }, []); // Empty dependency array to run this effect only once
   
-  // get all channels
+  // list all channels
   useEffect(() => {
     if (username !== "") {
       socket.emit("listChannels", {
@@ -83,16 +86,32 @@ export default function ChannalAndDirectMessage({ user, switchChannelName,setCha
 
   const InviteToChannel = (channelName: any, friend: string) => {
     setInvite(!invite);
-    socket.emit("getAllUsers", {sender: username});
-    socket.on("getAllUsers", (data) => {
-      setUsers(data);
-    });
+    if (channelName === "general") return;
     socket.emit("sendInviteToChannel", {
       sender: username,
       friend: friend,
       channel: channelName,
     });
+    socket.on("sendInviteToChannel", (data) => {
+      // save data to state as array
+      setInviteToChannel([...inviteToChannel, data] as any);
+      console.log("inviteToChannel", inviteToChannel);
+    });
   }
+
+  const listFriends = () => {
+    socket.emit("getAllUsers", {sender: username});
+    socket.on("getAllUsers", (data) => {
+      setUsers(data);
+    });
+
+  }
+
+  const saveCurrentChannel = (channelName: string) => {
+    setInvite(!invite);
+    setChannel(channelName);
+    switchChannelName(channelName);
+  };
 
   return (
     <div className="list-div bg-slate-900 mr-10 ml-10 text-purple-lighter  w-96  hidden lg:block rounded-2xl overflow-hidden border border-gray-800">
@@ -143,7 +162,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName,setCha
             <li
               className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
               key={index}
-              onClick={() => switchChannelName(channelName)}
+              onClick={() => saveCurrentChannel(channelName)}
             >
 
               <div className="flex justify-between">
@@ -151,7 +170,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName,setCha
                   # {channelName}
                 </p>
                 <span
-                onClick={() => InviteToChannel(channelName, "")}>
+                onClick={() => listFriends()}>
                   <svg className="w-4 h-4 text-gray-500 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
                   <path d="M6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Zm11-3h-2V5a1 1 0 0 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 0 0 2 0V9h2a1 1 0 1 0 0-2Z" />
                 </svg>
@@ -164,16 +183,16 @@ export default function ChannalAndDirectMessage({ user, switchChannelName,setCha
             invite && (
               // add menu card to list all users to invite
               <>
-                <div className="rounded-xl border border-gray-600 my-3">
+                <div className="rounded-xl border border-gray-600 m-2">
                 {
                   users.map((user, index) => {
                     return (
                       // display all users on middle of screen
-                      <div className="flex justify-between items-center space-x-2 py-2  cursor-pointer 
-                      px-4 mb-2 text-white 
+                      <div className="absolute top-1/4 left-1/1 z-10 w-72 pb-10  bg-gray-800 rounded-xl shadow-xl flex flex-col justify-center items-center
                       " key={index}
                       >
-                        <div className="flex  py-2 text-white font-bold cursor-pointer rounded-lg shadow-lg bg-backgroundColorPrimery border-gray-600 hover:bg-slate-900 hover:text-green-300">
+                        <div className="flex justify-center items-center w-full h-16 bg-gray-700 rounded-t-xl shadow-xl 
+                        ">
                         <img src={user.avatarUrl} alt="user" className="w-8 h-8 mr-5 rounded-full" />
                           <p>{user.username}</p>
                         </div>

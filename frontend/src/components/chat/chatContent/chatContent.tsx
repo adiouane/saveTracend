@@ -124,7 +124,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
           setSenderMessages([]);
           setRecieverMessages([]);
           setArrayMessages([]);
-          return;
+          return
         } else if (serverChannel === staticChannelName){
           if (username === user?.username) {
             // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages

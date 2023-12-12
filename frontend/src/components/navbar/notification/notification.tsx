@@ -1,11 +1,14 @@
 import socket from "@/services/socket";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 
 const Notification = ({ user }: { user: any }) => {
   const [notificationForFriend, setNotificationForFriend] = useState(false);
   const [sender, setSender] = useState<any[]>([]);
   const [senderUsername, setSenderUsername] = useState("");
   const [channelname, setChannelname] = useState("");
+  const [userWhoSendInvite, setUserWhoSendInvite] = useState("");
+  const [userWhoWillaAcceptInvite, setUserWhoWillaAcceptInvite] = useState("");
+
 
   useEffect(() => {
     socket.on("notification", (data) => {      
@@ -17,15 +20,21 @@ const Notification = ({ user }: { user: any }) => {
         
     });
 
-    // socket.on("sendInviteToChannel", (data) => {
-    
-    // });
- 
-
     return () => {
       // Clean up socket event listener when component unmounts
       socket.off("notification");
     };
+  }, []);
+
+  useEffect(() => {
+    socket.on("sendInviteToChannel", (data) => {
+      console.log("sendInviteToChannel", data);
+      // save data to state as array
+      setChannelname(data.channelId);
+      setUserWhoSendInvite(data.senderId);
+      setUserWhoWillaAcceptInvite(data.receiverId);
+    });
+    
   }, []);
 
 
@@ -36,14 +45,17 @@ const Notification = ({ user }: { user: any }) => {
       sender: senderUsername,
       receiver: user.username,
     });
-
-    socket.on("acceptFriendRequest", (data) => {
-      console.log("acceptFriendRequest", data);
-    });
-    
     // display none notification
     setNotificationForFriend(!notificationForFriend);
+    // remove notification from state
+    setSender([]);
   };
+
+  const emtyBoxOfNotification = () => {
+    setChannelname("");
+    setUserWhoSendInvite("");
+    setUserWhoWillaAcceptInvite("");
+  }
 
   return (
     <>
@@ -66,10 +78,10 @@ const Notification = ({ user }: { user: any }) => {
             />
           </svg>
           {notificationForFriend &&  user?.username !== senderUsername && (
-            <div className="absolute top-0 right-0 w-64 p-2 mt-12 bg-white rounded-md shadow-xl dark:bg-gray-800">
+            <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
                 {
                 sender.map((sender) => (
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-10">
                     <div className="flex items-center">
                         <img
                         className="object-cover w-8 h-8 rounded-full"
@@ -91,10 +103,37 @@ const Notification = ({ user }: { user: any }) => {
                         </button>
                     </div>
                     </div>
-                ))}
+                )
+                )}
             </div>
           )}
         </div>
+           {
+            channelname &&  user?.username !== userWhoSendInvite &&
+            (
+              <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
+                    <p className="mx-2 text-sm text-gray-800 dark:text-gray-200"> <span
+                    className="text-sm text-gray-800 dark:text-gray-200 font-bold"
+                    >
+                    {userWhoSendInvite}</span> Invite you to a channel <span
+                    className="text-sm text-gray-800 dark:text-gray-200 font-bold"
+                    >
+                    {channelname}</span> </p>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center">
+                    <button className="px-2 py-1 mr-2 text-xs text-green-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-green-400"
+                    onClick={() => {emtyBoxOfNotification()}}
+                    >
+                      Accept
+                    </button>
+                    <button className="px-2 py-1 text-xs text-red-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-red-400">
+                      ignore
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
       </div>
 
     </>

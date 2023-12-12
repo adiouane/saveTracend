@@ -12,7 +12,6 @@ export default function SearchBar() {
     const search = (e : any) => {
         setInput(e.target.value)
         setUsername(e.target.value)
-        console.log("username", user)
         if (input === '') {
             socket.emit('searchUser', '')
         }
@@ -20,9 +19,7 @@ export default function SearchBar() {
         socket.on('searchUser', (data) => {
             // filter data and search for user
             const filteredData = data.filter((user : any) => {
-                return user.username.toLowerCase().includes(input.toLowerCase())
-            }
-            )
+                return user.username.toLowerCase().includes(input.toLowerCase())})
             const userId = filteredData[0]?.id;
             setSearchResult(filteredData)
             setUserId(userId)

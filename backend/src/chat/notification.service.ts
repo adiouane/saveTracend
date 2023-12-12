@@ -143,6 +143,10 @@ export class notificationService {
     // ------------------ show invitation channel notification ------------------
     async sendInviteToChannel(data: { channel : string, sender : string, friend : string }) {
         console.log("data: ",data.channel, data.sender, data.friend)
+        if (data.sender === data.friend || data.sender === null || data.friend === null 
+            || data.channel === null || data.channel === "general") {
+            return;
+        }
         try{
             const senderUser = await this.prisma.user.findUnique({
                 where: {
@@ -176,13 +180,12 @@ export class notificationService {
             });
 
             if (isexist) {
-                // senderId: senderUser.username,
-                // receiverId: reciverUser.username,
-                // channelId: channel.name,
                 const datainfo = {
                     senderId: senderUser.username,
                     receiverId: reciverUser.username,
                     channelId: channel.name,
+                    status: "pending",
+            
                 }
                 return datainfo;
 
