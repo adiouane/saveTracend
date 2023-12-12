@@ -20,12 +20,8 @@ type User = {
 
 export default function ChatContent({ user, channel }: { user: any, channel: any }) {
   const [messageInput, setMessageInput] = useState(""); // State for input field
-  const [recieverMessages, setRecieverMessages] = useState<
-    { user: User; sender: string; channel: string; message: string }[]
-  >([]);
-  const [senderMessages, setSenderMessages] = useState<
-    { user: User; sender: string; channel: string; message: string }[]
-  >([]);
+  const [recieverMessages, setRecieverMessages] = useState<{ user: User; sender: string; channel: string; message: string }[]>([]);
+  const [senderMessages, setSenderMessages] = useState<{ user: User; sender: string; channel: string; message: string }[]>([]);
   const [avaterUser, setAvaterUser] = useState("");
   const [NameUser, setNameUser] = useState("");
   const [avaterReciever, setAvaterReciever] = useState("");
@@ -117,29 +113,29 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
       channel: channel,
     });
     // List all messages from the channel
-    socket.on("listChannelMessages", (data) => {
+    socket.on("listChannelMessages", (data : any) => {
       // Check if data.msg is an array before mapping
-        if (data.msg.length === 0) {
-          data.msg = [];
+      console.log("dataa is : ", data.msg)
+      const serverChannel = data.msg[0]?.channel?.name;
+      const staticChannelName = channel;
+
+        if (data.msg.length === 0 || serverChannel !== staticChannelName) {
+          //todo i stoped here
           setSenderMessages([]);
           setRecieverMessages([]);
           setArrayMessages([]);
-
-           return () => {
-            socket.off("listChannelMessages");
-          }
-        } else {
-          // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
+          return;
+        } else if (serverChannel === staticChannelName){
           if (username === user?.username) {
-            console.log("i enter the sender messages")
+            // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
             setSenderMessages(data.msg);
-            setAvaterUser(data.msg[0].user.avatarUrl);
+            setAvaterUser(data.msg[0]?.user.avatarUrl);
             setNameUser(user?.username);
             // clear the reciever messages
             setRecieverMessages([]);
           } else {
             setRecieverMessages(data.msg);
-            setAvaterReciever(data.msg[0].user.avatarUrl);
+            setAvaterReciever(data.msg[0]?.user.avatarUrl);
             setNameUser(user?.username);
             // clear the sender messages
             setSenderMessages([]);

@@ -106,9 +106,12 @@ export class channelService {
         id: channelId.id,
       },
       include: {
+        // include name of channel
         ChannelMessage: {
-          include: {
+          select: {
+            channel: true,
             user: true,
+            message: true,
           },
         },
       },
