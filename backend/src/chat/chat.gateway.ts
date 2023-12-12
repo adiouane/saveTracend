@@ -171,9 +171,9 @@ export class ChatGateway {
     },
     @ConnectedSocket() client: Socket,
   ) {
-    const saveMessage =
-      await this.directMessageService.createDirectMessage(data);
-    this.server.to(data.reciever).emit('directMessage', saveMessage);
+    const saveMessage = await this.directMessageService.createDirectMessage(data);
+    this.server.emit('directMessage', saveMessage);
+    console.log('saveMessage', saveMessage);
     return saveMessage;
   }
 

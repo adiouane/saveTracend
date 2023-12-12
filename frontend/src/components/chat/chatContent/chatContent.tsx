@@ -11,6 +11,7 @@ import { useChannleTypeStore } from "@/store/channelStore";
 import useRecieverStore from "@/store/recieverStore";
 import useMessageStore from "@/store/messagesStore";
 import useUsernameStore from "@/store/usernameStore";
+import { fetchUser } from "@/services";
 
 type User = {
   username: string;
@@ -35,32 +36,42 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   const [arrayMessages, setArrayMessages] = useState<any>([]);
   const [isBlockUser, setBlockUser] = useState(false);
 
-  
+  async function fetchUsername() {
+    const storedUserData = sessionStorage.getItem("user-store");
+    if (storedUserData) {
+      try {
+        const userData = await JSON.parse(storedUserData);
+        if (!userData) return;
+        const saveusername = userData.state.user?.username;
+        setUsername(saveusername);
+      } catch (error) {
+        console.error("Error parsing stored data:", error);
+      }
+    } else {
+      console.warn("User data not found in session storage.");
+    }
+  }
   
 
   useEffect(() => {
     // Search for the username and set it in the state
-    async function fetchUsername() {
-      const storedUserData = sessionStorage.getItem("user-store");
-      if (storedUserData) {
-        try {
-          const userData = await JSON.parse(storedUserData);
-          const saveusername = userData.state.user?.username;
-          setUsername(saveusername);
-        } catch (error) {
-          console.error("Error parsing stored data:", error);
-        }
-      } else {
-        console.warn("User data not found in session storage.");
-      }
-    }
     fetchUsername(); // Fetch the username
   }, []); 
 
+  //----------- handle key down ----------------
+  const handleKeyDown = (e: any) => {
+    console.log("first i enter the handleKeyDown")
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevents the default behavior (e.g., new line) for the Enter key
+      sendMessage();
+    }
+  };
+  
   
   //----------- send message ----------------
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
+    console.log("i enter the send message")
     // Send the message input to the serv    
     if (messageInput === "") return;
     
@@ -70,14 +81,23 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
         channel: channel,
         message: messageInput,
       });
-      handlelistChannelMessages();
+      socket.on("channelMessage", (data) => {
+        if (data) {
+          handlelistChannelMessages();
+        }
+      });
     } else {
       socket.emit("directMessage", {
         sender: username,
         reciever: reciever,
         message: messageInput,
       });
-      handlelistDirectMessages();
+      socket.on("directMessage", (data) => {
+        console.log("my data1", data)
+        if (data) {
+          handlelistDirectMessages();
+        }
+      });
     }
     
     setMessageInput("");
@@ -89,10 +109,9 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   //----------- handle list channel messages ----------------
 
   const handlelistChannelMessages = () => {
-    
-    // Join the channel
+      // Join the channel
     socket.emit("joinChannel", { channel: channel });
-
+    
     // Send event to get all messages from the channel
     socket.emit("listChannelMessages", {
       sender: username,
@@ -112,8 +131,9 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
             socket.off("listChannelMessages");
           }
         } else {
-
+          // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
           if (username === user?.username) {
+            console.log("i enter the sender messages")
             setSenderMessages(data.msg);
             setAvaterUser(data.msg[0].user.avatarUrl);
             setNameUser(user?.username);
@@ -162,7 +182,6 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   //----------- handle list direct messages ----------------
 
   const handlelistDirectMessages = () => {
-    
     handleBlockUser();
     if (!isBlockUser){
       socket.emit("listDirectMessages", {
@@ -200,21 +219,20 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
     }else{
       handlelistChannelMessages();
     }
+    return () => {
+      socket.off("listDirectMessages");
+      socket.off("listChannelMessages");;
+    }
   } , [
+    username,
     isDirectMessage,
     channel,
-    arrayMessages,
-    senderMessages,
-    recieverMessages,
+    reciever,
+    // arrayMessages,
     ]);
 
-  const handleKeyDown = (e: any) => {
-    if (e.key === 'Enter') {
-      e.preventDefault(); // Prevents the default behavior (e.g., new line) for the Enter key
-      sendMessage();
-    }
-  };
-  
+
+
 
   return (
     <div className="chat-content flex-1 flex flex-col overflow-hidden rounded-3xl shadow border border-gray-800 ">

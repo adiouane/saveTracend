@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { channel } from 'diagnostics_channel';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -66,7 +67,7 @@ export class channelService {
         },
       });
       console.log('createChannelMessage', createChannelMessage);
-      return createChannelMessage;
+      return createChannelMessage; // i dont have to return it
     } catch (err) {
       console.log(err);
     }
@@ -112,6 +113,7 @@ export class channelService {
         },
       },
     });
+    console.log('messages of ', data.channel, "is", messages);
     return messages;
   }
 
