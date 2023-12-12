@@ -32,7 +32,6 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   const {username, setUsername} =  useUsernameStore();
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
   const { reciever, setReciever } = useRecieverStore();
-  const { messages, setMessages} = useMessageStore();
   const [arrayMessages, setArrayMessages] = useState<any>([]);
   const [isBlockUser, setBlockUser] = useState(false);
 
@@ -124,7 +123,6 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
           data.msg = [];
           setSenderMessages([]);
           setRecieverMessages([]);
-          setMessages([]);
           setArrayMessages([]);
 
            return () => {
@@ -189,17 +187,8 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
         reciever: reciever,
       });
       socket.on("listDirectMessages", (data) => {
-        let userNameOfReciever = data.msg[0].receiver.username;
-        let userNameOfsender = data.msg[0].sender.username;
-        userNameOfReciever === username ? setMessages(data.msg) : null;
-        userNameOfsender === username ? setMessages(data.msg) : null;
-
         if (Array.isArray(data.msg)) { // Array.isArray to handdle an error ecured in browser console
-          setArrayMessages(messages);
-        }
-        // to avoid geting private between two users
-        if (userNameOfReciever !== username && userNameOfsender !== username) {
-          setArrayMessages([]);
+          setArrayMessages(data.msg);
         }
       });
     }
@@ -224,11 +213,10 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
       socket.off("listChannelMessages");;
     }
   } , [
-    username,
     isDirectMessage,
     channel,
+    username,
     reciever,
-    // arrayMessages,
     ]);
 
 
