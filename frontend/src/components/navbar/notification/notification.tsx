@@ -13,7 +13,6 @@ const Notification = ({ user }: { user: any }) => {
   useEffect(() => {
     socket.on("notification", (data) => {      
       // save data to state as array
-      console.log("notification", data);
         setSender((sender) => [...sender, data]);
         // save username to state
         setSenderUsername(data.username);
@@ -27,19 +26,17 @@ const Notification = ({ user }: { user: any }) => {
   }, []);
 
   useEffect(() => {
-    socket.on("sendInviteToChannel", (data) => {
-      console.log("sendInviteToChannel", data);
+    socket.on("sendInviteToChannel", (data : any) => {
       // save data to state as array
       setChannelname(data.channelId);
       setUserWhoSendInvite(data.senderId);
       setUserWhoWillaAcceptInvite(data.receiverId);
     });
     
-  }, []);
+  }, [channelname]);
 
 
   const saveFriendsToDB = async (senderUsername: string) => {
-
     // add sender to reciever friends list
     socket.emit("acceptFriendRequest", {
       sender: senderUsername,
@@ -52,9 +49,26 @@ const Notification = ({ user }: { user: any }) => {
   };
 
   const emtyBoxOfNotification = () => {
+    
     setChannelname("");
     setUserWhoSendInvite("");
     setUserWhoWillaAcceptInvite("");
+
+  }
+
+  const saveNewChannelToDB = async (channelName: string) => {
+    socket.emit("saveChannelName", {
+      channel: channelName,
+      channelType: "private",
+      sender: user.username,
+    });
+    socket.on("saveChannelName", (data :any) => {
+      // save data to state as array
+      console.log("data:100: ",data.id)
+      
+    });
+    emtyBoxOfNotification();
+
   }
 
   return (
@@ -78,34 +92,47 @@ const Notification = ({ user }: { user: any }) => {
             />
           </svg>
           {notificationForFriend &&  user?.username !== senderUsername && (
-            <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
-                {
-                sender.map((sender) => (
-                    <div className="flex items-center justify-between mt-10">
-                    <div className="flex items-center">
-                        <img
-                        className="object-cover w-8 h-8 rounded-full"
-                        src={sender.avatarUrl}
-                        alt="avatar"
-                        />
-                        <p className="mx-2 text-sm text-gray-800 dark:text-gray-200">
-                        {sender.username}
-                        </p>
-                    </div>
-                    <div className="flex items-center">
-                        <button className="px-2 py-1 mr-2 text-xs text-green-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-green-400"
-                        onClick={() => {saveFriendsToDB(sender.username)}}
-                        >
-                        Accept
-                        </button>
-                        <button className="px-2 py-1 text-xs text-red-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-red-400">
-                        Reject
-                        </button>
-                    </div>
-                    </div>
-                )
+            <>
+            { sender && sender.length > 0 && (
+                <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
+                {sender &&
+                  sender.map((sender) => (
+                      <div className="flex items-center justify-between mt-10">
+                      <div className="flex items-center">
+                          <img
+                          className="object-cover w-8 h-8 rounded-full"
+                          src={sender.avatarUrl}
+                          alt="avatar"
+                          />
+                          <p className="mx-2 text-sm text-gray-800 dark:text-gray-200">
+                          {sender.username}
+                          </p>
+                      </div>
+                        <div className="flex items-center">
+                            <button className="px-2 py-1 mr-2 text-xs text-green-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-green-400"
+                            onClick={() => {saveFriendsToDB(sender.username)}}
+                            >
+                            Accept
+                            </button>
+                            <button className="px-2 py-1 text-xs text-red-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-red-400"
+                            onClick={() => {emtyBoxOfNotification()}}
+                            >
+                            ignore
+                            </button>
+                        </div>
+                      </div>
+                ) 
                 )}
             </div>
+            )}
+            {
+              sender && sender.length === 0 && (
+                <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
+                  <p className="mx-2 text-sm text-gray-800 dark:text-gray-200">You have no notification</p>
+                </div>
+              )
+            }
+                </>
           )}
         </div>
            {
@@ -122,11 +149,13 @@ const Notification = ({ user }: { user: any }) => {
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center">
                     <button className="px-2 py-1 mr-2 text-xs text-green-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-green-400"
-                    onClick={() => {emtyBoxOfNotification()}}
+                    onClick={() => {saveNewChannelToDB(channelname)}}
                     >
                       Accept
                     </button>
-                    <button className="px-2 py-1 text-xs text-red-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-red-400">
+                    <button className="px-2 py-1 text-xs text-red-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-red-400"
+                    onClick={() => {emtyBoxOfNotification()}}
+                    >
                       ignore
                     </button>
                   </div>

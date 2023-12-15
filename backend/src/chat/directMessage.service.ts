@@ -106,7 +106,6 @@ export class directMessageService {
         receiver: true,
       },
     });
-    console.log("hello ", listDirectMessages)
     return listDirectMessages;
   }
 }

@@ -12,14 +12,13 @@ export class channelService {
     channel: string;
     message: string;
   }) {
-    console.log('check if channel exist', data.channel);
     try {
       const user = await this.prisma.user.findUnique({
         where: {
           username: data.sender,
         },
       });
-      let isexist = await this.prisma.channel.findUnique({
+      let isexist = await this.prisma.channel.findFirst({
         where: {
           name: data.channel,
           // userId: user.id,
@@ -43,14 +42,12 @@ export class channelService {
       }
 
       // todo channl now will be static
-      const channel = await this.prisma.channel.findUnique({
+      const channel = await this.prisma.channel.findFirst({
         where: {
           name: data.channel,
-          // userId: user.id,
         },
       });
-      console.log('creating  message on channel');
-      console.log('channel', channel);
+
       const createChannelMessage = await this.prisma.channelMessage.create({
         data: {
           message: data.message,
@@ -66,7 +63,6 @@ export class channelService {
           },
         },
       });
-      console.log('createChannelMessage', createChannelMessage);
       return createChannelMessage; // i dont have to return it
     } catch (err) {
       console.log(err);
@@ -89,7 +85,8 @@ export class channelService {
       console.log('User not found');
       return;
     }
-    const channelId = await this.prisma.channel.findUnique({
+
+    const channelId = await this.prisma.channel.findFirst({
       where: {
         name: data.channel,
         // userId: user.id,
@@ -116,7 +113,6 @@ export class channelService {
         },
       },
     });
-    console.log('messages of ', data.channel, "is", messages);
     return messages;
   }
 
@@ -146,8 +142,4 @@ export class channelService {
     });
     return channels;
   }
-
-
-
-
 }

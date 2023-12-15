@@ -33,7 +33,7 @@ export default function Chat() {
 
 
   return (
-    <div className="chat-container">
+    <div className="chat-container overflow-auto">
       <div className="flex h-full">
           <ChannalAndDirectMessage user={user} switchChannelName={switchChannelName} 
           setChannalPageAndSavedefaultName={setChannalPageAndSavedefaultName}/>

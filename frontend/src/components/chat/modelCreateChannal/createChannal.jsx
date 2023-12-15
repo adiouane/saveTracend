@@ -69,13 +69,20 @@ export default function CreateChannal(props) {
                 />
                 <label className="text-white px-3">Private</label>
               </div>
-              <div>
                 <input type="radio" name="type" value="protected"
                   onChange={(e) => setChannel("protected")}
                  />
-                <label className="text-white px-3">Protected</label>
-              </div>
+                <label className="text-white px-3"
+                >Protected</label>
             </div>
+            {
+              channel === "protected" && (
+                <div>
+                  <input type="text" name="password" placeholder="password" className="bg-slate-900 w-full my-5 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-800"
+                  />
+                </div>
+              )
+            }
             <div className="flex justify-end mt-5">
               <button
                 className="bg-slate-900 text-white px-4 py-2 rounded-lg mr-2"

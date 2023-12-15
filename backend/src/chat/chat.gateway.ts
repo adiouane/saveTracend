@@ -110,13 +110,14 @@ export class ChatGateway {
       },
     });
 
-    const checkChannel = await this.prisma.channel.findUnique({
+    const checkChannel = await this.prisma.channel.findFirst({
       where: {
         name: data.channel,
       },
     });
     if (checkChannel) {
-      throw new Error('Channel already exists');
+      this.server.emit('saveChannelName', checkChannel);
+      console.log('checkChannel', checkChannel);
     }
     const saveChannel = await this.prisma.channel.create({
       data: {
@@ -130,6 +131,7 @@ export class ChatGateway {
       },
     });
     this.server.emit('saveChannelName', saveChannel);
+    console.log('saveChannel', saveChannel);
     return saveChannel;
   }
 
@@ -155,7 +157,6 @@ export class ChatGateway {
         channel: true,
       },
     });
-    // console.log('users', users);
     this.server.emit('getAllUsers', users);
     return users;
   }
@@ -173,7 +174,6 @@ export class ChatGateway {
   ) {
     const saveMessage = await this.directMessageService.createDirectMessage(data);
     this.server.emit('directMessage', saveMessage);
-    console.log('saveMessage', saveMessage);
     return saveMessage;
   }
 
@@ -227,7 +227,6 @@ export class ChatGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      // console.log('user search', data.user);
       const user = await this.prisma.user.findMany({
         where: {
           username: {
@@ -236,14 +235,13 @@ export class ChatGateway {
         },
       });
       this.server.emit('searchUser', user); // this will return all users
-      // console.log('🚀 ~ file: chat.gateway.ts:237 ~ ChatGateway ~ user:', user);
       return user;
     } catch (error) {
       console.error('Error while fetching messages:', error);
       throw error; // Rethrow the error to handle it in your calling code
     }
   }
-  //TODO: inviteToChannel 
+
   @SubscribeMessage('sendInviteToChannel')
   async sendInviteToChannel(
     @MessageBody()
@@ -256,6 +254,7 @@ export class ChatGateway {
     try {
       const friend = await this.notificationService.sendInviteToChannel(data);
       this.server.emit('sendInviteToChannel', friend); // this will return all users
+      console.log('friend', friend);
       return friend;
     } catch (error) {
       console.error('Error while fetching messages:', error);
@@ -277,8 +276,6 @@ export class ChatGateway {
       if (!data.receiverInvite || !data.senderInvite) {
         return;
       }
-      // console.log("friend search", data.receiverInvite)
-      // console.log("friend search", data.senderInvite)
       const friend = await this.notificationService.sendFriendRequest(data);
       this.server.emit('sendFriendRequest', friend); // this will return all users
       return friend;
@@ -297,10 +294,8 @@ export class ChatGateway {
     },
   ) {
     try {
-      // console.log("----", data.username)
       const notification = await this.notificationService.listFriendRequest(data);
       this.server.emit('notification', notification); // this will return all users
-      // console.log("🚀 ~ file: chat.gateway.ts:237 ~ ChatGateway ~ user:", {notification})
       return notification;
     } catch (error) {
       console.error('Error while fetching messages:', error);
@@ -339,14 +334,12 @@ export class ChatGateway {
       if (!data.id) {
         return;
       }
-      console.log('----', data.id);
       const user = await this.prisma.user.findUnique({
         where: {
           id: data.id,
         },
       });
       this.server.emit('getUserById', user);
-      console.log("user", user)
       return user;
     } catch (error) {
       console.error('Error while fetching user by id:', error);
@@ -362,7 +355,6 @@ export class ChatGateway {
       sender: string;
     },
   ) {
-    console.log('----', data.sender);
     try {
       const friends = await this.prisma.friends.findMany({
         where: {
@@ -371,8 +363,8 @@ export class ChatGateway {
           },
         },
       });
+      console.log('friends', friends);
 
-      console.log("friends", friends);
       this.server.emit('getAllUsersFriends', friends); // this will return all users
       return friends;
     } catch (error) {
@@ -467,16 +459,58 @@ export class ChatGateway {
     }
   }
 
-  // inviteToChannel
-  // @SubscribeMessage('inviteToChannel')
-  // async inviteToChannel(
-  //   @MessageBody()
-  //   data: {
-  //     sender: string;
-  //     friend: string;
-  //     channel: string;
-  //   },
-  // ) 
+  // handle online status for a user
+  @SubscribeMessage('onlineStatus')
+  async onlineStatus(
+    @MessageBody()
+    data: {
+      username: string;
+      status: string;
+    },
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.username,
+        },
+      });
+      const status = await this.prisma.user.update({
+        where: {
+          username: user.username,
+        },
+        data: {
+          status: data.status,
+        },
+      });
+      this.server.emit('onlineStatus', status); // this will return all users
+      return status;
+    } catch (error) {
+      console.error('Error while fetching user by id:', error);
+      throw error;
+    }
+  }
+
+  //getUserStatus
+  @SubscribeMessage('getUserStatus')
+  async getUserStatus(
+    @MessageBody()
+    data: {
+      username: string;
+    },
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.username,
+        },
+      });
+      this.server.emit('getUserStatus', user); // this will return all users
+      return user;
+    } catch (error) {
+      console.error('Error while fetching user by id:', error);
+      throw error;
+    }
+  }
 }
 
 

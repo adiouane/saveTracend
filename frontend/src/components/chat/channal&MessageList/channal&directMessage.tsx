@@ -61,6 +61,12 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         channelType: channel,
         sender: username,
       });
+      socket.on("saveChannelName", (data) => {
+        // save id and name of channel to state
+        console.log("data:100: ", data);
+        console.log("data:100: ", data.id);
+        console.log("data:100: ", data.channel);
+      });
     }
   };
 
@@ -78,14 +84,14 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         if (!data || data[0]?.user.username !== username ) return;
         data.map((channel: any) => {
           if (channel.name === "general") return;
-          setChannels((prevChannels) => [...prevChannels, channel.name]);
+          setChannels((channels) => [...channels, channel.name]);
         });
       });
     }
   }, [username]);
 
   const InviteToChannel = (channelName: any, friend: string) => {
-    setInvite(!invite);
+    setIsDirectMessage(false);
     if (channelName === "general") return;
     socket.emit("sendInviteToChannel", {
       sender: username,
@@ -95,23 +101,36 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     socket.on("sendInviteToChannel", (data) => {
       // save data to state as array
       setInviteToChannel([...inviteToChannel, data] as any);
-      console.log("inviteToChannel", inviteToChannel);
     });
+    setInvite(!invite);
   }
 
   const listFriends = () => {
-    socket.emit("getAllUsers", {sender: username});
-    socket.on("getAllUsers", (data) => {
-      setUsers(data);
+    setInvite(!invite);
+    setIsDirectMessage(false);
+    socket.emit("getAllUsers", {
+      sender: username,
+    });
+    socket.on("getAllUsers", (data : any) => {
+      // save data to state as array
+      const usersArry = [];
+      for (let i = 0; i < data.length; i++) {
+        usersArry.push(data[i]);
+      }
+      // filter out the user who send the invite
+      const filterOutUser = usersArry.filter((user) => user.username !== username);
+      setUsers(filterOutUser);
     });
 
+    
   }
 
   const saveCurrentChannel = (channelName: string) => {
-    setInvite(!invite);
     setChannel(channelName);
     switchChannelName(channelName);
   };
+
+
 
   return (
     <div className="list-div bg-slate-900 mr-10 ml-10 text-purple-lighter  w-96  hidden lg:block rounded-2xl overflow-hidden border border-gray-800">
@@ -147,7 +166,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           </div>
         </div>
         <div
-          className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
+          className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer "
           onClick={() => setChannalPageAndSavedefaultName()}
         >
           <div className="flex justify-between">
@@ -157,7 +176,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           </div>
 
         </div>
-        <ul>
+        <ul className="overflow-y-auto h-[120px] w-[394px]">
           {channels.map((channelName, index) => (
             <li
               className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
@@ -180,42 +199,67 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           ))}
         </ul>
           {
-            invite && (
+            invite && users.length > 0 && (
               // add menu card to list all users to invite
               <>
                 <div className="rounded-xl border border-gray-600 m-2">
                 {
                   users.map((user, index) => {
                     return (
-                      // display all users on middle of screen
-                      <div className="absolute top-1/4 left-1/1 z-10 w-72 pb-10  bg-gray-800 rounded-xl shadow-xl flex flex-col justify-center items-center
-                      " key={index}
-                      >
-                        <div className="flex justify-center items-center w-full h-16 bg-gray-700 rounded-t-xl shadow-xl 
-                        ">
-                        <img src={user.avatarUrl} alt="user" className="w-8 h-8 mr-5 rounded-full" />
-                          <p>{user.username}</p>
+                      <div key={index} className="flex justify-between items-center m-2">
+                        <div className="flex items-center">
+                          <img
+                            className="object-cover w-8 h-8 rounded-full"
+                            src={user.avatarUrl}
+                            alt="avatar"
+                          />
+                          <p className="mx-2 text-base text-gray-200  dark:text-gray-200">
+                            {user.username}
+                          </p>
                         </div>
-                        <button
-                          className="bg-red-500 hover:bg-red-700 text-white font-thin px-8 ml-2 rounded-full py-2 "
-                          onClick={() => InviteToChannel(channel, user.username)}
-                        >
-                          invite
-                        </button>
+                        <div className="flex items-center">
+                          <button className="px-2 py-1 mr-2 text-xs text-green-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-green-400"
+                            onClick={() => {InviteToChannel(channel, user.username)}}
+                          >
+                            Invite
+                          </button>
+                          <button className="px-2 py-1 text-xs text-red-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-red-400"
+                            onClick={() => {setInvite(!invite)}}
+                          >
+                            ignore
+                          </button>
+                        </div>
                       </div>
-                    );
-                  },)
+                    )
+                  }
+                  )
                 }
                   
                 </div>
               </>
             )
           }
+          {
+            invite && users.length === 0 && (
+              <div className="absolute top-1/4 left-1/1 z-10 w-72   bg-gray-800 rounded-xl shadow-xl flex flex-col justify-center items-center
+              ">
+                <p className="text-white my-5 mb-1">
+                  no friends to invite
+                </p>
+                <button
+                  className="bg-red-500 hover:bg-red-700 text-white font-thin pl-4 pr-4 mb-2 py-0 rounded-full"
+                  onClick={() => setInvite(!invite)}
+                >
+                  close
+                </button>
+              </div>
+            )
+          }
       </div>
 
       {/* direct messages */}
 
-      <div className="mb-[420px]">
+      <div className="mb-[420px] overflow-y-auto h-[400px]">
         <div className="px-4 mb-2 text-white flex justify-between items-center">
           <span
             className="opacity-40 text-white font-thin shadow-lg 

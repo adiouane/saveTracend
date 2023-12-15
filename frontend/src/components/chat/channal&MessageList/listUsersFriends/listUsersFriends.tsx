@@ -9,11 +9,11 @@ export default function ListUsersFriends({ username }: { username: any }) {
   const [users, setUsers] = useState([]);
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
   const { reciever, setReciever } = useRecieverStore();
-  const { messages, setMessages } = useMessageStore();
   const [friendsId, setFriendsId] = useState([]);
   const [UserName, setUserName] = useState("");
   const [showBlock, setShowBlock] = useState(false);
-
+  const [noFriends, setNoFriends] = useState(false);
+  const [color, setColor] = useState("bg-green-400");
 
 
   // fetch username from session storage
@@ -45,10 +45,12 @@ export default function ListUsersFriends({ username }: { username: any }) {
     socket.on("getAllUsersFriends", (data) => {
       if (data.length <= 0) {
         console.log("no friends1");
+        setNoFriends(true);
         setUsers([]);
         return;
       }
       else {
+        // copy friends id to friendsArray
         let friendsArray = [...data.map((user: any) => user.receiverId)];
         setFriendsId(friendsArray as any);
       }
@@ -80,6 +82,7 @@ export default function ListUsersFriends({ username }: { username: any }) {
     }
     else {
       console.log("no friends");
+      setNoFriends(true);
       setUsers([]);
       return;
     }
@@ -106,8 +109,8 @@ export default function ListUsersFriends({ username }: { username: any }) {
 
   // Use useEffect with users as a dependency to trigger the copy operation
   useEffect(() => {
-    getAllUsers();
     fetchUserName();
+    getAllUsers();
     comparingFriends();
     if (UserName !== "") {
       getRealFriendsById();
@@ -120,10 +123,6 @@ export default function ListUsersFriends({ username }: { username: any }) {
   const saveReceiverName = (username: string) => {
     setReciever(username);
     setIsDirectMessage(true);
-    socket.emit("listDirectMessages", { sender: username, reciever: reciever });
-    socket.on("listDirectMessages", (data) => {
-      setMessages(data);
-    });
   };
 
   let usersArray = [...users];
@@ -144,7 +143,7 @@ export default function ListUsersFriends({ username }: { username: any }) {
 
   return (
     <>
-      {usersArray.map((user: any, index) => (
+      {noFriends && usersArray.map((user: any, index) => (
         <div
           className="flex items-center justify-between py-2  hover:bg-slate-700 rounded-2xl"
           key={index}
@@ -165,7 +164,11 @@ export default function ListUsersFriends({ username }: { username: any }) {
               <div className="flex">
                 <div className="flex flex-col">
                 <span className="font-semibold text-md">{user.username}</span>
-                <span className="text-sm text-gray-400">online</span>
+                {user.status === "online" ? (
+                  <span className="text-sm text-green-400 font-bold">{user.status}</span>
+                ) : (
+                  <span className="text-sm text-gray-400">{user.status}</span>
+                )}
                 </div>
               </div>
          

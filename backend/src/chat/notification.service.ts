@@ -69,7 +69,6 @@ export class notificationService {
                     },
                 },
             });
-            // console.log("list friends ",user)
             return user;
         }
         catch(err){
@@ -96,18 +95,13 @@ export class notificationService {
                 },
             });
 
-            // check if the user is already are friend to each other
-            const isfriend = await this.prisma.friends.findFirst({
+            // // check if the receiver is already a friend to the sender
+            const isFriend = await this.prisma.friends.findFirst({
                 where: {
-                    friendId: senderUser.id,
+                    id: senderUser.id,
+                    friendId: reciverUser.id,
                 },
             });
-
-            if (isfriend) {
-                console.log("friendRequest alredy frineds",isfriend)
-                return isfriend;
-            }
-
 
             const friend = await this.prisma.friends.create({
                 data: {
@@ -130,7 +124,8 @@ export class notificationService {
                     status: "accepted",
                 },
             });
-
+            console.log("addFriendToRecieverTo",addFriendToRecieverTo)
+            console.log("friend",friend)
             return friend;
         }
         catch(err){
@@ -142,11 +137,7 @@ export class notificationService {
 
     // ------------------ show invitation channel notification ------------------
     async sendInviteToChannel(data: { channel : string, sender : string, friend : string }) {
-        console.log("data: ",data.channel, data.sender, data.friend)
-        if (data.sender === data.friend || data.sender === null || data.friend === null 
-            || data.channel === null || data.channel === "general") {
-            return;
-        }
+
         try{
             const senderUser = await this.prisma.user.findUnique({
                 where: {
@@ -162,7 +153,7 @@ export class notificationService {
             if (!reciverUser) {
                 return;
             }
-            const channel = await this.prisma.channel.findUnique({
+            const channel = await this.prisma.channel.findFirst({
                 where: {
                     name: data.channel,
                 },

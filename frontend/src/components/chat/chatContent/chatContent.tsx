@@ -30,6 +30,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   const { reciever, setReciever } = useRecieverStore();
   const [arrayMessages, setArrayMessages] = useState<any>([]);
   const [isBlockUser, setBlockUser] = useState(false);
+  const [serverChannel, setServerChannel] = useState("");
 
   async function fetchUsername() {
     const storedUserData = sessionStorage.getItem("user-store");
@@ -55,7 +56,6 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
 
   //----------- handle key down ----------------
   const handleKeyDown = (e: any) => {
-    console.log("first i enter the handleKeyDown")
     if (e.key === 'Enter') {
       e.preventDefault(); // Prevents the default behavior (e.g., new line) for the Enter key
       sendMessage();
@@ -65,8 +65,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   
   //----------- send message ----------------
 
-  const sendMessage = async () => {
-    console.log("i enter the send message")
+  const sendMessage =  () => {
     // Send the message input to the serv    
     if (messageInput === "") return;
     
@@ -76,7 +75,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
         channel: channel,
         message: messageInput,
       });
-      socket.on("channelMessage", (data) => {
+      socket.on("channelMessage", (data :any) => {
         if (data) {
           handlelistChannelMessages();
         }
@@ -88,7 +87,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
         message: messageInput,
       });
       socket.on("directMessage", (data) => {
-        console.log("my data1", data)
+        
         if (data) {
           handlelistDirectMessages();
         }
@@ -115,8 +114,8 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
     // List all messages from the channel
     socket.on("listChannelMessages", (data : any) => {
       // Check if data.msg is an array before mapping
-      console.log("dataa is : ", data.msg)
       const serverChannel = data.msg[0]?.channel?.name;
+      // setServerChannel(serverChannel);
       const staticChannelName = channel;
 
         if (data.msg.length === 0 || serverChannel !== staticChannelName) {
@@ -162,7 +161,10 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
         const getblockedname = data.username;
         if (getblockedname === reciever){
           setBlockUser(true);
-          return;
+          setArrayMessages([]);
+          return () => {
+            socket.off("getUserById");
+          }
         }
         else
         {
@@ -199,6 +201,23 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   
 
   useEffect(() => {
+    // handle online/offline status
+    socket.emit("onlineStatus", { username: username, status: "online" });
+    socket.on('onlineStatus', (data : any) => {
+      console.log('connected');
+      console.log("is online : ",data.status);
+    });
+
+    // if user click on close tab or change the url set the status to offline
+    window.addEventListener('beforeunload', () => {
+      alert("beforeunload");
+      socket.emit("onlineStatus", { username: username, status: "offline" });
+      socket.on('onlineStatus', (data : any) => {
+        console.log('disconnected');
+        console.log("is online : ",data.status);
+      } );
+    });
+
     if (isDirectMessage) {
       handlelistDirectMessages();
     }else{
@@ -213,6 +232,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
     channel,
     username,
     reciever,
+    // serverChannel,
     ]);
 
 

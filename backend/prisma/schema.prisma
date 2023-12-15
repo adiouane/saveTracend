@@ -10,11 +10,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserStatus {
-  ONLINE
-  OFFLINE
-  IN_GAME
-}
+// enum UserStatus {
+//   ONLINE
+//   OFFLINE
+//   IN_GAME
+// }
 
 model User {
   id                     String           @unique @id @default(uuid()) 
@@ -23,7 +23,7 @@ model User {
   isTwofactorsEnabled    Boolean          @default(false)
   twoFactorsSecret       String?
   avatarUrl              String
-  status                 UserStatus       @default(OFFLINE)
+  status                 String           @default("offline")
   channel                Channel[]
   channelMessage         ChannelMessage[]
   senderInvitesChannel   ChannelInvite[]  @relation("senderInvitesChannel")
@@ -35,13 +35,13 @@ model User {
   receiverRequests       FriendRequest[]  @relation("receiverRequests")
   notifications          Notification[]
   blocker                BlockedUsers[]   @relation("blocker")
-  getblocked              BlockedUsers[]   @relation("Getblocked")
+  getblocked             BlockedUsers[]   @relation("Getblocked")
 
 }
 
 model Channel {
   id             String           @id @default(uuid())
-  name           String           @unique
+  name           String           //@unique
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   role           String           @default("owner")

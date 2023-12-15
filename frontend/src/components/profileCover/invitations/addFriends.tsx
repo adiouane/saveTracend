@@ -12,33 +12,32 @@ export default function AddFriends() {
   // Get the id of the user from the URL
   const params = useParams();
   const userId = params.id;
+  
+  const fetchUser = async () => {
+    // Fetch the username from session storage
+    const storedUserData = sessionStorage.getItem("user-store");
+  
+    if (storedUserData) {
+      // Parse the stored data as JSON
+      const userData = await JSON.parse(storedUserData);
+  
+      // Access the username property
+      const savedUsername = userData.state.user?.username;
+      
+      // Set the username
+      setUsername(savedUsername);
+      const id = userId;
+      socket.emit("getUserById", {
+        id: id,
+      }); // as sender
+      socket.on("getUserById", (data) => {
+      const receiver = data.username;
+      setceiverId(receiver);
+    });
+  }
+};
 
-  useEffect(() => {
-    
-    const fetchUser = async () => {
-      // Fetch the username from session storage
-      const storedUserData = sessionStorage.getItem("user-store");
-    
-      if (storedUserData) {
-        // Parse the stored data as JSON
-        const userData = await JSON.parse(storedUserData);
-    
-        // Access the username property
-        const savedUsername = userData.state.user?.username;
-        
-        // Set the username
-        setUsername(savedUsername);
-        const id = userId;
-        socket.emit("getUserById", {
-          id: id,
-        }); // as sender
-        socket.on("getUserById", (data) => {
-        const receiver = data.username;
-        setceiverId(receiver);
-      });
-    }
-  };
-    
+  useEffect(() => {  
   fetchUser();
 }, []);
 
