@@ -26,6 +26,7 @@ model User {
   status                 String           @default("offline")
   channel                Channel[]
   channelMessage         ChannelMessage[]
+  channelMemberships    ChannelMembership[]
   senderInvitesChannel   ChannelInvite[]  @relation("senderInvitesChannel")
   receiverInvitesChannel ChannelInvite[]  @relation("receiverInvitesChannel")
   sentDirectMessages     DirectMessage[]  @relation("sender")
@@ -37,6 +38,7 @@ model User {
   blocker                BlockedUsers[]   @relation("blocker")
   getblocked             BlockedUsers[]   @relation("Getblocked")
 
+
 }
 
 model Channel {
@@ -44,12 +46,13 @@ model Channel {
   name           String           //@unique
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  role           String           @default("owner")
+  // role           String           @default("owner")
   visibility     String @default("public")
   ChannelMessage ChannelMessage[]
   userId         String
   user           User             @relation(fields: [userId], references: [id])
   ChannelInvite  ChannelInvite[]
+  ChannelMembership ChannelMembership[]
 }
 
 model ChannelMessage {
@@ -60,6 +63,23 @@ model ChannelMessage {
   channel   Channel  @relation(fields: [channelId], references: [id])
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model ChannelMembership {
+  id             String   @id @default(uuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  roleId         String   @default("owner")
+  isAdmin        Boolean  @default(false)
+  isKicked       Boolean  @default(false)
+  isBanned       Boolean  @default(false)
+  isMuted        Boolean  @default(false)
+  kickExpiresAt  DateTime?
+  channelId      String
+  
+  channel        Channel  @relation(fields: [channelId], references: [id])
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
 }
 
 model ChannelInvite {

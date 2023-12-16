@@ -37,6 +37,7 @@ export class ChatGateway {
     data: {
       sender: string;
       channel: string;
+      channelId: string;
       message: string;
     },
     @ConnectedSocket() client: Socket,
@@ -64,6 +65,7 @@ export class ChatGateway {
     data: {
       channel: string;
       sender: string;
+      channelId: string;
     },
     @ConnectedSocket() client: Socket,
   ) {
@@ -82,6 +84,7 @@ export class ChatGateway {
         });
 
         this.server.to(data.channel).emit('listChannelMessages', { msg });
+        console.log("messaget dyal lsitchannel ", msg)
         return msg;
       } else {
         console.error('No messages found.');
@@ -101,6 +104,7 @@ export class ChatGateway {
       channel: string;
       channelType: string;
       sender: string;
+      // channelId: string;
     },
     @ConnectedSocket() client: Socket,
   ) {
@@ -112,7 +116,7 @@ export class ChatGateway {
 
     const checkChannel = await this.prisma.channel.findFirst({
       where: {
-        name: data.channel,
+        name: data.channel, // TODO: Replace with channel name
       },
     });
     if (checkChannel) {
@@ -138,11 +142,12 @@ export class ChatGateway {
   // get all channels
   @SubscribeMessage('listChannels')
   async listChannels(
-    @MessageBody() data: { sender: string; channel: string },
+    @MessageBody() data: { sender: string; },
     @ConnectedSocket() client: Socket,
   ) {
     const channels = await this.channelService.listChannels(data);
-    this.server.to(data.channel).emit('listChannels', channels);
+    // this.server.to(data.channel).emit('listChannels', channels);
+    this.server.emit('listChannels', channels);
     return channels;
   }
 

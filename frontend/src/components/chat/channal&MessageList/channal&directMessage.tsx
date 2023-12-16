@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import socket from "@/services/socket";
 import ListUsersFriends from "./listUsersFriends/listUsersFriends";
 import { useIsDirectMessage } from "@/store/userStore";
-import { useChannleTypeStore } from "@/store/channelStore";
+import { useChannleIdStore, useChannleTypeStore } from "@/store/channelStore";
 import useUsernameStore from "@/store/usernameStore";
 
 export default function ChannalAndDirectMessage({ user, switchChannelName, setChannalPageAndSavedefaultName }: 
@@ -13,12 +13,14 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
 
     const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
     
-    const { channel, setChannel } = useChannleTypeStore();
-    const [channels, setChannels] = useState<string[]>([]);
+    const { channel, setChannel } = useChannleTypeStore(); // channel type
+    const { channelId, setChannelId } = useChannleIdStore(); // channel id
+    const [channels, setChannels] = useState<string[]>([]); // list of channels
     const {username, setUsername} =  useUsernameStore();
     const [invite, setInvite] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
     const [inviteToChannel, setInviteToChannel] = useState([]);
+    const [channelWithIdAndName, setChannelWithIdAndName] = useState<any[]>([]); // list of channelsId
     
     // todo: add this to costum hook
     useEffect(() => {
@@ -54,7 +56,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
   // This function will be passed as a prop to Child1
   const addChannel = (channelName: any) => {
     // Add the new channel name to the existing list of channels
-    setChannels([...channels, channelName]);
+    setChannels([...channelWithIdAndName, channelName]);
     if (username !== "") {
       socket.emit("saveChannelName", {
         channel: channelName,
@@ -62,11 +64,11 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         sender: username,
       });
       socket.on("saveChannelName", (data) => {
-        // save id and name of channel to state
-        console.log("data:100: ", data);
-        console.log("data:100: ", data.id);
-        console.log("data:100: ", data.channel);
+        // save data to state as array
+        setChannels([...channelWithIdAndName, channelName]);
+        setChannel(channelName);
       });
+
     }
   };
 
@@ -76,15 +78,15 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     if (username !== "") {
       socket.emit("listChannels", {
         sender: username,
-        channel: channels,
       });
 
       // data returned from server as array of objects
-      socket.on("listChannels", (data) => {
+      socket.on("listChannels", (data :any) => {
         if (!data || data[0]?.user.username !== username ) return;
         data.map((channel: any) => {
           if (channel.name === "general") return;
-          setChannels((channels) => [...channels, channel.name]);
+          // save data to state as array
+          setChannelWithIdAndName((channelWithIdAndName) => [...channelWithIdAndName, channel]);
         });
       });
     }
@@ -121,12 +123,12 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
       const filterOutUser = usersArry.filter((user) => user.username !== username);
       setUsers(filterOutUser);
     });
-
-    
   }
 
-  const saveCurrentChannel = (channelName: string) => {
+  const saveCurrentChannel = (channelName: string, id: string) => {
+    // alert("channelName: " + channelName + " id: " + id);
     setChannel(channelName);
+    setChannelId(id);
     switchChannelName(channelName);
   };
 
@@ -177,16 +179,16 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
 
         </div>
         <ul className="overflow-y-auto h-[120px] w-[394px]">
-          {channels.map((channelName, index) => (
+          {channelWithIdAndName.map((channel, index) => (
             <li
               className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
-              key={index}
-              onClick={() => saveCurrentChannel(channelName)}
+              key={channel.id}
+              onClick={() => saveCurrentChannel(channel.name, channel.id)}
             >
 
               <div className="flex justify-between">
                 <p>
-                  # {channelName}
+                  # {channel.name}
                 </p>
                 <span
                 onClick={() => listFriends()}>

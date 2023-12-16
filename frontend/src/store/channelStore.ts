@@ -9,5 +9,17 @@ import { create } from "zustand";
         channel: "general",
         setChannel: (channel: string) => set({ channel }),
       }));
+
+      // channel id 
+      type useChannleIdStore = {
+        channelId: any;
+        setChannelId: (channel: any) => void;
+      }
+
+      const useChannleIdStore = create<useChannleIdStore>((set) => ({
+        channelId: "",
+        setChannelId: (channelId: any) => set({ channelId }),
+      }));
     
 export  {useChannleTypeStore};
+export {useChannleIdStore};

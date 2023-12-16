@@ -18,7 +18,7 @@ type User = {
   avatarUrl: string;
 };
 
-export default function ChatContent({ user, channel }: { user: any, channel: any }) {
+export default function ChatContent({ user, channel, channelId }: { user: any, channel: any, channelId: any }) {
   const [messageInput, setMessageInput] = useState(""); // State for input field
   const [recieverMessages, setRecieverMessages] = useState<{ user: User; sender: string; channel: string; message: string }[]>([]);
   const [senderMessages, setSenderMessages] = useState<{ user: User; sender: string; channel: string; message: string }[]>([]);
@@ -66,13 +66,14 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   //----------- send message ----------------
 
   const sendMessage =  () => {
-    // Send the message input to the serv    
+    // Send the message input to the serv   
     if (messageInput === "") return;
     
     if (!isDirectMessage) {
       socket.emit("channelMessage", {
         sender: username,
         channel: channel,
+        channelId: channelId,
         message: messageInput,
       });
       socket.on("channelMessage", (data :any) => {
@@ -110,6 +111,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
     socket.emit("listChannelMessages", {
       sender: username,
       channel: channel,
+      channelId: channelId,
     });
     // List all messages from the channel
     socket.on("listChannelMessages", (data : any) => {
@@ -117,6 +119,9 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
       const serverChannel = data.msg[0]?.channel?.name;
       // setServerChannel(serverChannel);
       const staticChannelName = channel;
+      const usernameFromServer = data.msg[0]?.user?.username;
+      const usernameFromSession = username;
+
 
         if (data.msg.length === 0 || serverChannel !== staticChannelName) {
           //todo i stoped here
@@ -125,7 +130,8 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
           setArrayMessages([]);
           return
         } else if (serverChannel === staticChannelName){
-          if (username === user?.username) {
+          
+          if (usernameFromServer !== usernameFromSession) {
             // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
             setSenderMessages(data.msg);
             setAvaterUser(data.msg[0]?.user.avatarUrl);
@@ -203,19 +209,14 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   useEffect(() => {
     // handle online/offline status
     socket.emit("onlineStatus", { username: username, status: "online" });
-    socket.on('onlineStatus', (data : any) => {
-      console.log('connected');
-      console.log("is online : ",data.status);
-    });
+    // socket.on("onlineStatus", (data : any) => {
+    //   alert(data.status)
+    // });
 
     // if user click on close tab or change the url set the status to offline
     window.addEventListener('beforeunload', () => {
-      alert("beforeunload");
       socket.emit("onlineStatus", { username: username, status: "offline" });
-      socket.on('onlineStatus', (data : any) => {
-        console.log('disconnected');
-        console.log("is online : ",data.status);
-      } );
+      // alert("you are offline");
     });
 
     if (isDirectMessage) {
@@ -230,6 +231,7 @@ export default function ChatContent({ user, channel }: { user: any, channel: any
   } , [
     isDirectMessage,
     channel,
+    channelId,
     username,
     reciever,
     // serverChannel,

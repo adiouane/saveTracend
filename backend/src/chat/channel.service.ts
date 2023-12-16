@@ -10,60 +10,84 @@ export class channelService {
   async createChannelMessage(data: {
     sender: string;
     channel: string;
+    channelId: string;
     message: string;
   }) {
     try {
+      if (data.channel === 'general') {
+        // first case
+        console.log('Channel name in createChannelMessage:', data.channel);
+        const chnnelname = await this.prisma.channel.findFirst({
+          where: {
+            name: data.channel,
+          },
+        });
+        // user
+        const user = await this.prisma.user.findUnique({
+          where: {
+            username: data.sender,
+          },
+        });
+        if (!user) {
+          throw new Error('User not found');
+        }
+        // create message
+        const channelMessage = await this.prisma.channelMessage.create({
+          data: {
+            message: data.message,
+            channel: {
+              connect: {
+                id: chnnelname.id,
+              },
+            },
+            user: {
+              connect: {
+                id: user.id,
+              },
+            },
+          },
+        });
+        return channelMessage;
+      }
       const user = await this.prisma.user.findUnique({
         where: {
           username: data.sender,
         },
       });
-      let isexist = await this.prisma.channel.findFirst({
-        where: {
-          name: data.channel,
-          // userId: user.id,
-        },
-      });
-      if (!isexist) {
-        console.log('not exist and we will creating channel');
-        const channel = await this.prisma.channel.create({
-          data: {
-            name: data.channel,
-            user: {
-              connect: {
-                username: user.username,
-              },
-            },
-          },
-        });
-      }
       if (!user) {
         throw new Error('User not found');
       }
 
-      // todo channl now will be static
-      const channel = await this.prisma.channel.findFirst({
+      let isexist = await this.prisma.channel.findUnique({
         where: {
-          name: data.channel,
+          id: data.channelId,
         },
       });
 
-      const createChannelMessage = await this.prisma.channelMessage.create({
+      if (isexist){
+        console.log('Channel found1');
+      }
+   
+      if (!isexist) {
+        throw new Error('Channel not found createChannelMessage');
+      }
+      
+      const channelMessage = await this.prisma.channelMessage.create({
         data: {
           message: data.message,
-          user: {
-            connect: {
-              username: data.sender,
-            },
-          },
           channel: {
             connect: {
-              id: channel.id,
+              id: data.channelId,
+            },
+          },
+          user: {
+            connect: {
+              id: user.id,
             },
           },
         },
       });
-      return createChannelMessage; // i dont have to return it
+      return channelMessage;
     } catch (err) {
       console.log(err);
     }
@@ -71,55 +95,78 @@ export class channelService {
 
   // ------------------ list channels Messages ------------------
 
-  async listChannelMessages(data: { sender: string; channel: string }) {
-    if (!data.channel || !data.sender) {
-      console.log('Channel not found');
+  async listChannelMessages(data: { sender: string; channel: string, channelId: string }) {
+    console.log('listChannelMessages data :', data);
+    if (!data.channel && !data.sender && !data.channelId) {
+      console.log('Channel not found listChannelMessages data');
       return;
     }
-    const user = await this.prisma.user.findUnique({
-      where: {
-        username: data.sender,
-      },
-    });
-    if (!user) {
-      console.log('User not found');
-      return;
-    }
-
-    const channelId = await this.prisma.channel.findFirst({
-      where: {
-        name: data.channel,
-        // userId: user.id,
-      },
-    });
-    if (!channelId) {
-      console.log('Channel not found');
-      return;
-    }
-
-    // list all messages for a channel
-    const messages = await this.prisma.channel.findMany({
-      where: {
-        id: channelId.id,
-      },
-      include: {
-        // include name of channel
-        ChannelMessage: {
-          select: {
-            channel: true,
-            user: true,
-            message: true,
+    if (data.channel === 'general') {
+      // first case becuase general channel is created by default and doesn't have id
+      console.log('Channel name :', data.channel);
+      const chnnelname = await this.prisma.channel.findFirst({
+        where: {
+          name: data.channel,
+        },
+      });
+      
+       // list all messages for a channel
+      const messages = await this.prisma.channel.findMany({
+        where: {
+          id: chnnelname.id,
+        },
+        include: {
+          // include name of channel
+          ChannelMessage: {
+            select: {
+              channel: true,
+              user: true,
+              message: true,
+            },
           },
         },
-      },
-    });
-    return messages;
+      });
+      console.log('messages for general channel :', messages);
+      return messages;
+    }
+    else{
+        const channelId = await this.prisma.channel.findUnique({
+          where: {
+            id: data.channelId,
+          },
+        });
+        if (!channelId) {
+          console.log('Channel not found in listChannelMessages');
+          return;
+        }
+        if (channelId){
+          console.log('Channel found');
+        }
+
+        // list all messages for a channel
+        const messages = await this.prisma.channel.findMany({
+          where: {
+            id: channelId.id,
+          },
+          include: {
+            // include name of channel
+            ChannelMessage: {
+              select: {
+                channel: true,
+                user: true,
+                message: true,
+              },
+            },
+          },
+        });
+        return messages;
+  }
   }
 
 
   // ------------------ list channels ------------------
-  async listChannels(data: { sender: string; channel: string }) {
-    if (!data.sender || !data.channel) {
+  async listChannels(data: { sender: string; }) {
+    if (!data.sender) {
       console.log('sender not found');
       return;
     }
@@ -138,6 +185,11 @@ export class channelService {
       },
       include: {
         user: true,
+        // ChannelMembership: {
+        //   select: {
+        //     user: true,
+        //   },
+        // },
       },
     });
     return channels;
