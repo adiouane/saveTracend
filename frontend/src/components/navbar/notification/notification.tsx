@@ -1,4 +1,5 @@
 import socket from "@/services/socket";
+import { channel } from "diagnostics_channel";
 import { useState, useEffect, use } from "react";
 
 const Notification = ({ user }: { user: any }) => {
@@ -8,7 +9,7 @@ const Notification = ({ user }: { user: any }) => {
   const [channelname, setChannelname] = useState("");
   const [userWhoSendInvite, setUserWhoSendInvite] = useState("");
   const [userWhoWillaAcceptInvite, setUserWhoWillaAcceptInvite] = useState("");
-
+  const [idOfChannel, setIdOfChannel] = useState("");
 
   useEffect(() => {
     socket.on("notification", (data) => {      
@@ -28,9 +29,11 @@ const Notification = ({ user }: { user: any }) => {
   useEffect(() => {
     socket.on("sendInviteToChannel", (data : any) => {
       // save data to state as array
-      setChannelname(data.channelId);
-      setUserWhoSendInvite(data.senderId);
-      setUserWhoWillaAcceptInvite(data.receiverId);
+      setChannelname(data.channel?.name);
+      setUserWhoSendInvite(data.sender?.username);
+      setUserWhoWillaAcceptInvite(data.receiver?.username);
+      setIdOfChannel(data.channel?.id);
+
     });
     
   }, [channelname]);
@@ -53,21 +56,31 @@ const Notification = ({ user }: { user: any }) => {
     setChannelname("");
     setUserWhoSendInvite("");
     setUserWhoWillaAcceptInvite("");
-
   }
 
   const saveNewChannelToDB = async (channelName: string) => {
-    socket.emit("saveChannelName", {
+    // alert("userWhoSendInvite: " + userWhoSendInvite + " channelName: " + channelName + " idOfChannel: " + idOfChannel + " userWhoWillaAcceptInvite: " + userWhoWillaAcceptInvite)
+   // update channel status to accepted
+    socket.emit("sendInviteToChannel", {
+      sender: userWhoSendInvite,
+      friend: userWhoWillaAcceptInvite,
       channel: channelName,
-      channelType: "private",
-      sender: user.username,
+      status: "accepted", 
     });
-    socket.on("saveChannelName", (data :any) => {
-      // save data to state as array
-      console.log("data:100: ",data.id)
+    socket.on("sendInviteToChannel", (data : any) => {
+      console.log("accepted sender status  : " + data.status)
+      console.log("accepted channel id  : " + data.channelId)
+      console.log("accepted channel name  : " + data.channel.name)
+      socket.emit("saveAcceptedChannelToDB", {
+        friend: userWhoWillaAcceptInvite,
+        // channel: channelName,
+        status: data.status, 
+        channelId: data.channelId
+      })
       
     });
     emtyBoxOfNotification();
+    setNotificationForFriend(!notificationForFriend);
 
   }
 
@@ -91,7 +104,7 @@ const Notification = ({ user }: { user: any }) => {
               d="M8 3.464V1.1m0 2.365a5.338 5.338 0 0 1 5.133 5.368v1.8c0 2.386 1.867 2.982 1.867 4.175C15 15.4 15 16 14.462 16H1.538C1 16 1 15.4 1 14.807c0-1.193 1.867-1.789 1.867-4.175v-1.8A5.338 5.338 0 0 1 8 3.464ZM4.54 16a3.48 3.48 0 0 0 6.92 0H4.54Z"
             />
           </svg>
-          {notificationForFriend &&  user?.username !== senderUsername && (
+          {notificationForFriend &&  user?.username === senderUsername && (
             <>
             { sender && sender.length > 0 && (
                 <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
@@ -136,7 +149,7 @@ const Notification = ({ user }: { user: any }) => {
           )}
         </div>
            {
-            channelname &&  user?.username !== userWhoSendInvite &&
+           channelname &&  user?.username !== userWhoSendInvite &&
             (
               <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
                     <p className="mx-2 text-sm text-gray-800 dark:text-gray-200"> <span

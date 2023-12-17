@@ -124,8 +124,6 @@ export class notificationService {
                     status: "accepted",
                 },
             });
-            console.log("addFriendToRecieverTo",addFriendToRecieverTo)
-            console.log("friend",friend)
             return friend;
         }
         catch(err){
@@ -136,7 +134,11 @@ export class notificationService {
     // ------------------ reject friend ------------------
 
     // ------------------ show invitation channel notification ------------------
-    async sendInviteToChannel(data: { channel : string, sender : string, friend : string }) {
+    async sendInviteToChannel(data: { channel : string, sender : string, friend : string, status : string }) {
+        console.log("channel",data.channel)
+        console.log("sender",data.sender)
+        console.log("friend",data.friend)
+        console.log("status",data.status)
 
         try{
             const senderUser = await this.prisma.user.findUnique({
@@ -168,17 +170,25 @@ export class notificationService {
                     receiverId: reciverUser.id,
                     channelId: channel.id,
                 },
+                include: {
+                    channel: true,
+                    receiver: true,
+                    sender: true,
+                },
             });
 
             if (isexist) {
-                const datainfo = {
-                    senderId: senderUser.username,
-                    receiverId: reciverUser.username,
-                    channelId: channel.name,
-                    status: "pending",
-            
-                }
-                return datainfo;
+                // update status
+                const updateStatus = await this.prisma.channelInvite.update({
+                    where: {
+                        id: isexist.id,
+                    },
+                    data: {
+                        status: data.status,
+                    },
+                });
+                console.log("updateStatus",updateStatus)
+                return isexist;
 
             }
 
@@ -187,7 +197,7 @@ export class notificationService {
                     senderId: senderUser.id,
                     receiverId: reciverUser.id,
                     channelId: channel.id,
-                    status: "pending",
+                    status: data.status,
                 },
             });
            
@@ -197,4 +207,65 @@ export class notificationService {
             throw err;
         }
     }
+
+    // ---------------------- saveAcceptedChannelToDB ------------------
+    async saveAcceptedChannelToDB(data: {   friend : string, status : string, channelId: string }) {
+        // save id of the channel to user the acceptedChannelInvite table in the database
+        try{
+            const reciverUser = await this.prisma.user.findUnique({
+                where: {
+                    username: data.friend,
+                },
+            });
+            if (!reciverUser) {
+                return;
+            }
+            const channel = await this.prisma.channel.findFirst({
+                where: {
+                    id: data.channelId,
+                },
+            });
+            if (!channel) {
+                return;
+            }
+
+            const isexist = await this.prisma.acceptedChannelInvite.findFirst({
+                where: {
+                    userId: reciverUser.id,
+                    channelId: channel.id,
+                },
+                include: {
+                    user: true,
+                },
+            });
+
+            if (isexist) {
+                // update status
+                // const updateStatus = await this.prisma.acceptedChannelInvite.update({
+                //     where: {
+                //         id: isexist.id,
+                //     },
+                //     data: {
+                //         idOfChannel: data.channelId,
+                //     },
+                // });
+                return isexist;
+            }
+
+            const invite = await this.prisma.acceptedChannelInvite.create({
+                data: {
+                    userId: reciverUser.id,
+                    channelId: channel.id,
+                    idOfChannel: data.channelId,
+                },
+            });
+            return invite;
+          
+            
+        }
+        catch(err){
+            throw err;
+        }
+    }
+        
 }

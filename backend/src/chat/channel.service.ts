@@ -96,19 +96,29 @@ export class channelService {
   // ------------------ list channels Messages ------------------
 
   async listChannelMessages(data: { sender: string; channel: string, channelId: string }) {
-    console.log('listChannelMessages data :', data);
     if (!data.channel && !data.sender && !data.channelId) {
       console.log('Channel not found listChannelMessages data');
       return;
     }
     if (data.channel === 'general') {
       // first case becuase general channel is created by default and doesn't have id
-      console.log('Channel name :', data.channel);
       const chnnelname = await this.prisma.channel.findFirst({
         where: {
           name: data.channel,
         },
       });
+      if (!chnnelname) {
+        const channel = await this.prisma.channel.create({
+          data: {
+            name: data.channel,
+            user: {
+              connect: {
+                username: data.sender,
+              },
+            },
+          },
+        });
+      }
       
        // list all messages for a channel
       const messages = await this.prisma.channel.findMany({
@@ -126,7 +136,6 @@ export class channelService {
           },
         },
       });
-      console.log('messages for general channel :', messages);
       return messages;
     }
     else{
@@ -194,4 +203,5 @@ export class channelService {
     });
     return channels;
   }
+  
 }

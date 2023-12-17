@@ -104,24 +104,29 @@ export class ChatGateway {
       channel: string;
       channelType: string;
       sender: string;
-      // channelId: string;
+      channelId: string;
     },
     @ConnectedSocket() client: Socket,
   ) {
+    if (!data.channel && !data.channelType && !data.sender && !data.channelId) {
+      console.log('Channel not found saveChannelName data');
+      return;
+    }
     const user = await this.prisma.user.findUnique({
       where: {
         username: data.sender,
       },
     });
 
-    const checkChannel = await this.prisma.channel.findFirst({
+    const checkChannel = await this.prisma.channel.findUnique({
       where: {
-        name: data.channel, // TODO: Replace with channel name
+        id: data.channelId,
       },
     });
     if (checkChannel) {
       this.server.emit('saveChannelName', checkChannel);
       console.log('checkChannel', checkChannel);
+      return checkChannel;
     }
     const saveChannel = await this.prisma.channel.create({
       data: {
@@ -150,6 +155,72 @@ export class ChatGateway {
     this.server.emit('listChannels', channels);
     return channels;
   }
+
+  // save New Invite Channel To DB
+  // @SubscribeMessage('listChannelsById')
+  // async listChannelsById(
+  //   @MessageBody()
+  //   data: {
+  //     id: string;
+  //   },
+  //   @ConnectedSocket() client: Socket,
+  // ) {
+  //   const channels = await this.prisma.channel.findMany({
+  //     where: {
+  //       user: {
+  //         id: data.id,
+  //       },
+  //     },
+  //   });
+  //   this.server.emit('listChannelsById', channels);
+  //   return channels;
+  // }
+
+  //listAcceptedChannels
+  @SubscribeMessage('listAcceptedChannels')
+  async listAcceptedChannels(
+    @MessageBody()
+    data: {
+      sender: string;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const channels = await this.prisma.acceptedChannelInvite.findMany({
+      where: {
+        user: {
+          username: data.sender,
+        },
+      },
+    });
+    this.server.emit('listAcceptedChannels', channels);
+    console.log('channels accepeted', channels);
+    return channels;
+  }
+
+  // get channel name by id
+  @SubscribeMessage('getChannelById')
+  async getChannelById(
+    @MessageBody()
+    data: {
+      id: string;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (!data.id) {
+      console.log('Channel not found getChannelById data');
+      return;
+    }
+    const channel = await this.prisma.channel.findUnique({
+      where: {
+        id: data.id,
+      },
+    });
+    this.server.emit('getChannelById', channel);
+    return channel;
+  }
+  
+
+  //------------------------end channel------------------------
 
   // get all users
   @SubscribeMessage('getAllUsers')
@@ -254,18 +325,41 @@ export class ChatGateway {
       sender: string;
       friend: string;
       channel: string;
+      status: string;
     },
   ) {
     try {
       const friend = await this.notificationService.sendInviteToChannel(data);
       this.server.emit('sendInviteToChannel', friend); // this will return all users
-      console.log('friend', friend);
       return friend;
     } catch (error) {
       console.error('Error while fetching messages:', error);
       throw error; // Rethrow the error to handle it in your calling code
     }
   }
+
+  // saveAcceptedChannelToDB
+  @SubscribeMessage('saveAcceptedChannelToDB')
+  async saveAcceptedChannelToDB(
+    @MessageBody()
+    data: {
+      friend: string;
+      // channel: string;
+      status: string;
+      channelId: string;
+    },
+  ) {
+    try {
+      const friend = await this.notificationService.saveAcceptedChannelToDB(data);
+      this.server.emit('saveAcceptedChannelToDB', friend); // this will return all users
+      return friend;
+    } catch (error) {
+      console.error('Error while fetching messages:', error);
+      throw error; // Rethrow the error to handle it in your calling code
+    }
+
+  }
+  
 
 
   // add friend to user by id
@@ -474,6 +568,9 @@ export class ChatGateway {
     },
   ) {
     try {
+      if (!data.username) {
+        return;
+      }
       const user = await this.prisma.user.findUnique({
         where: {
           username: data.username,

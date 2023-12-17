@@ -1,7 +1,7 @@
 "use client";
 
 import CreateChannal from "../modelCreateChannal/createChannal";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import socket from "@/services/socket";
 import ListUsersFriends from "./listUsersFriends/listUsersFriends";
 import { useIsDirectMessage } from "@/store/userStore";
@@ -21,8 +21,9 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     const [users, setUsers] = useState<any[]>([]);
     const [inviteToChannel, setInviteToChannel] = useState([]);
     const [channelWithIdAndName, setChannelWithIdAndName] = useState<any[]>([]); // list of channelsId
-    
-    // todo: add this to costum hook
+    const [acceptedChannels, setAcceptedChannels] = useState<any[]>([]); // list of channelsId
+   
+    // TODO: add this to costum hook
     useEffect(() => {
       // Search for the username and set it in the state
       async function fetchUsername() {
@@ -62,6 +63,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         channel: channelName,
         channelType: channel,
         sender: username,
+        channelId: channelId,
       });
       socket.on("saveChannelName", (data) => {
         // save data to state as array
@@ -80,7 +82,6 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         sender: username,
       });
 
-      // data returned from server as array of objects
       socket.on("listChannels", (data :any) => {
         if (!data || data[0]?.user.username !== username ) return;
         data.map((channel: any) => {
@@ -89,8 +90,49 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           setChannelWithIdAndName((channelWithIdAndName) => [...channelWithIdAndName, channel]);
         });
       });
+
+      socket.emit("listAcceptedChannels", {
+        sender: username,
+      });
+      socket.on("listAcceptedChannels", (data :any) => {  
+        socket.emit("getChannelById", {
+          sender: username,
+          id: data[0]?.idOfChannel,
+        })
+        socket.on("getChannelById", (data :any) => {
+          // save data to state as array with checkin if the channel is already exist in the state and remove it if it does
+          setAcceptedChannels((prevAcceptedChannels) => {
+            const isAcceptedChannelExist = prevAcceptedChannels.some((ac) => ac.id === data.id);
+            return isAcceptedChannelExist ? prevAcceptedChannels : [...prevAcceptedChannels, data];
+          });
+        })
+      });
     }
+    return () => {
+      socket.off("listChannels");
+      socket.off("listAcceptedChannels");
+      socket.off("getChannelById");
+    };
   }, [username]);
+
+  // // LIST ACCEPTED CHANNELS
+  // useEffect(() => {
+  //    //TODO: HERE YOU WILL LIST ACCEPTED CHANNELS OF THE USER
+  //    socket.emit("listAcceptedChannels", {
+  //     sender: username,
+  //   });
+  //   socket.on("listAcceptedChannels", (data :any) => {
+  //     setChannelId(data[0]?.idOfChannel);
+  //   });
+  //   socket.emit("getChannelById", {
+  //     sender: username,
+  //     id: channelId,
+  //   })
+  //   socket.on("getChannelById", (data :any) => {
+  //     // save data to state as array
+  //     setAcceptedChannels((acceptedChannels) => [...acceptedChannels, data]);
+  //   })
+  // }, []);
 
   const InviteToChannel = (channelName: any, friend: string) => {
     setIsDirectMessage(false);
@@ -99,6 +141,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
       sender: username,
       friend: friend,
       channel: channelName,
+      status: "pending",
     });
     socket.on("sendInviteToChannel", (data) => {
       // save data to state as array
@@ -178,7 +221,8 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           </div>
 
         </div>
-        <ul className="overflow-y-auto h-[120px] w-[394px]">
+        <ul className="overflow-y-auto h-[120px]">
+
           {channelWithIdAndName.map((channel, index) => (
             <li
               className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
@@ -199,6 +243,21 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
               </div>
             </li>
           ))}
+          {
+            acceptedChannels && acceptedChannels.map((channel, index) => (
+              <li
+                className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
+                key={channel.id}
+                onClick={() => saveCurrentChannel(channel.name, channel.id)}
+              >
+                <div className="flex justify-between">
+                  <p>
+                    # {channel.name}
+                  </p>
+                </div>
+              </li>
+            ))
+          }
         </ul>
           {
             invite && users.length > 0 && (

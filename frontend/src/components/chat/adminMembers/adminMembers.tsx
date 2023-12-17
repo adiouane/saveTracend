@@ -1,5 +1,15 @@
 "use client";
 import { useIsDirectMessage } from "@/store/userStore";
+import { use, useEffect, useState } from "react";
+import socket from "@/services/socket";
+
+
+// const [members, setMembers] = useState([]);
+// const [admins, setAdmins] = useState([]);
+
+// useEffect(() => {}, []);
+
+
 
 
 export default function AdminsMembers({ user } : { user: any}) {
