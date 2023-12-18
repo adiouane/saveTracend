@@ -135,11 +135,6 @@ export class notificationService {
 
     // ------------------ show invitation channel notification ------------------
     async sendInviteToChannel(data: { channel : string, sender : string, friend : string, status : string }) {
-        console.log("channel",data.channel)
-        console.log("sender",data.sender)
-        console.log("friend",data.friend)
-        console.log("status",data.status)
-
         try{
             const senderUser = await this.prisma.user.findUnique({
                 where: {

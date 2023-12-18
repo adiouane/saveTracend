@@ -84,7 +84,6 @@ export class ChatGateway {
         });
 
         this.server.to(data.channel).emit('listChannelMessages', { msg });
-        console.log("messaget dyal lsitchannel ", msg)
         return msg;
       } else {
         console.error('No messages found.');
@@ -125,7 +124,6 @@ export class ChatGateway {
     });
     if (checkChannel) {
       this.server.emit('saveChannelName', checkChannel);
-      console.log('checkChannel', checkChannel);
       return checkChannel;
     }
     const saveChannel = await this.prisma.channel.create({
@@ -144,7 +142,7 @@ export class ChatGateway {
     return saveChannel;
   }
 
-  // get all channels
+  // get all  channels that user own
   @SubscribeMessage('listChannels')
   async listChannels(
     @MessageBody() data: { sender: string; },
@@ -193,7 +191,29 @@ export class ChatGateway {
       },
     });
     this.server.emit('listAcceptedChannels', channels);
-    console.log('channels accepeted', channels);
+    return channels;
+  }
+
+  // listPublicChannels
+  // list all public channels in database
+  @SubscribeMessage('listPublicChannels')
+  async listPublicChannels(
+    @MessageBody() data: { sender: string; },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const channels = await this.prisma.channel.findMany({
+      where: {
+        visibility: 'public',
+        user: {
+          username: {
+            not: data.sender, // i dont want to see my own channels in the list but i will return other users channels
+            // becuase my own channels will be in listChannels and if i list them here i will have duplicates
+          },
+        },
+      },
+    });
+    this.server.emit('listPublicChannels', channels);
+    console.log('channels public', channels);
     return channels;
   }
 
@@ -462,7 +482,6 @@ export class ChatGateway {
           },
         },
       });
-      console.log('friends', friends);
 
       this.server.emit('getAllUsersFriends', friends); // this will return all users
       return friends;

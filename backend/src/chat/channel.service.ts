@@ -16,7 +16,6 @@ export class channelService {
     try {
       if (data.channel === 'general') {
         // first case
-        console.log('Channel name in createChannelMessage:', data.channel);
         const chnnelname = await this.prisma.channel.findFirst({
           where: {
             name: data.channel,
@@ -48,46 +47,47 @@ export class channelService {
           },
         });
         return channelMessage;
-      }
-      const user = await this.prisma.user.findUnique({
-        where: {
-          username: data.sender,
-        },
-      });
-      if (!user) {
-        throw new Error('User not found');
-      }
+      }else{
+        const user = await this.prisma.user.findUnique({
+          where: {
+            username: data.sender,
+          },
+        });
+        if (!user) {
+          throw new Error('User not found');
+        }
 
-      let isexist = await this.prisma.channel.findUnique({
-        where: {
-          id: data.channelId,
-        },
-      });
+        let isexist = await this.prisma.channel.findUnique({
+          where: {
+            id: data.channelId,
+          },
+        });
 
-      if (isexist){
-        console.log('Channel found1');
-      }
-   
-      if (!isexist) {
-        throw new Error('Channel not found createChannelMessage');
-      }
-      
-      const channelMessage = await this.prisma.channelMessage.create({
-        data: {
-          message: data.message,
-          channel: {
-            connect: {
-              id: data.channelId,
+        if (isexist){
+          console.log('Channel found1');
+        }
+    
+        if (!isexist) {
+          throw new Error('Channel not found createChannelMessage');
+        }
+        
+        const channelMessage = await this.prisma.channelMessage.create({
+          data: {
+            message: data.message,
+            channel: {
+              connect: {
+                id: data.channelId,
+              },
+            },
+            user: {
+              connect: {
+                id: user.id,
+              },
             },
           },
-          user: {
-            connect: {
-              id: user.id,
-            },
-          },
-        },
-      });
-      return channelMessage;
+        });
+        return channelMessage;
+      }
     } catch (err) {
       console.log(err);
     }
@@ -111,6 +111,7 @@ export class channelService {
         const channel = await this.prisma.channel.create({
           data: {
             name: data.channel,
+            visibility: 'public',
             user: {
               connect: {
                 username: data.sender,
