@@ -10,12 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// enum UserStatus {
-//   ONLINE
-//   OFFLINE
-//   IN_GAME
-// }
-
 model User {
   id                     String           @unique @id @default(uuid()) 
   username               String           @unique
@@ -47,8 +41,8 @@ model Channel {
   name           String           //@unique
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  // role           String           @default("owner")
   visibility     String @default("public")
+  password       String?
   ChannelMessage ChannelMessage[]
   userId         String
   user           User             @relation(fields: [userId], references: [id])

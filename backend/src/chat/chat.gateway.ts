@@ -47,7 +47,6 @@ export class ChatGateway {
     return saveMessage;
   }
 
-  // todo idono if that work with all
   // Join a specific channel room
   @SubscribeMessage('joinChannel')
   async joinChannel(
@@ -55,7 +54,8 @@ export class ChatGateway {
     data: { channel: string },
     @ConnectedSocket() client: Socket,
   ) {
-    client.join(data.channel);
+    client.join(data.channel); // this is how you join a channel room
+    // .join() is a built-in method from Socket.IO that allows you to join a specific channel room
   }
 
   // list messages for a channel
@@ -104,6 +104,7 @@ export class ChatGateway {
       channelType: string;
       sender: string;
       channelId: string;
+      password: string;
     },
     @ConnectedSocket() client: Socket,
   ) {
@@ -111,35 +112,71 @@ export class ChatGateway {
       console.log('Channel not found saveChannelName data');
       return;
     }
-    const user = await this.prisma.user.findUnique({
-      where: {
-        username: data.sender,
-      },
-    });
-
-    const checkChannel = await this.prisma.channel.findUnique({
-      where: {
-        id: data.channelId,
-      },
-    });
-    if (checkChannel) {
-      this.server.emit('saveChannelName', checkChannel);
-      return checkChannel;
-    }
-    const saveChannel = await this.prisma.channel.create({
-      data: {
-        name: data.channel,
-        visibility: data.channelType,
-        user: {
-          connect: {
-            username: user.username,
+    if(data.password){
+      // case of protected channel
+      console.log("passowrd", data.password)
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.sender,
+        },
+      });
+       
+      const checkChannel = await this.prisma.channel.findUnique({
+        where: {
+          id: data.channelId,
+        },
+      });
+      if (checkChannel) {
+        this.server.emit('saveChannelName', checkChannel);
+        return checkChannel;
+      }
+      const saveChannel = await this.prisma.channel.create({
+        data: {
+          name: data.channel,
+          visibility: data.channelType,
+          password: data.password,
+          user: {
+            connect: {
+              username: user.username,
+            },
           },
         },
-      },
-    });
-    this.server.emit('saveChannelName', saveChannel);
-    console.log('saveChannel', saveChannel);
-    return saveChannel;
+      });
+      this.server.emit('saveChannelName', saveChannel);
+      console.log('saveChannel', saveChannel);
+      return saveChannel;
+      
+    }else{
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.sender,
+        },
+      });
+
+      const checkChannel = await this.prisma.channel.findUnique({
+        where: {
+          id: data.channelId,
+        },
+      });
+      if (checkChannel) {
+        this.server.emit('saveChannelName', checkChannel);
+        return checkChannel;
+      }
+      const saveChannel = await this.prisma.channel.create({
+        data: {
+          name: data.channel,
+          visibility: data.channelType,
+          user: {
+            connect: {
+              username: user.username,
+            },
+          },
+        },
+      });
+      this.server.emit('saveChannelName', saveChannel);
+      console.log('saveChannel', saveChannel);
+      return saveChannel;
+    }
   }
 
   // get all  channels that user own
@@ -215,6 +252,61 @@ export class ChatGateway {
     this.server.emit('listPublicChannels', channels);
     console.log('channels public', channels);
     return channels;
+  }
+
+  // listProtectedChannels
+  // list all protected channels in database
+  @SubscribeMessage('listProtectedChannels')
+  async listProtectedChannels(
+    @MessageBody() data: { sender: string; },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const channels = await this.prisma.channel.findMany({
+      where: {
+        visibility: 'protected',
+      },
+    });
+    this.server.emit('listProtectedChannels', channels);
+    console.log('channels protected', channels);
+    return channels;
+  }
+
+  // save password for a protected channel
+  @SubscribeMessage('savePassword')
+  async savePassword(
+    @MessageBody()
+    data: {
+      channel: string;
+      password: string;
+      sender: string;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        username: data.sender,
+      },
+    });
+    const channel = await this.prisma.channel.findUnique({
+      where: {
+        id: data.channel,
+      },
+    });
+    const savePassword = await this.prisma.channel.update({
+      where: {
+        id: channel.id,
+      },
+      data: {
+        password: data.password,
+        user: {
+          connect: {
+            username: user.username,
+          },
+        },
+      },
+    });
+    this.server.emit('savePassword', savePassword);
+    return savePassword;
   }
 
   // get channel name by id
