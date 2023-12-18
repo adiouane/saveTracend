@@ -6,7 +6,7 @@ import { create } from "zustand";
       }
     // state to store the channel name
     const useChannleTypeStore = create<ChannelStoreType>((set) => ({
-        channel: "general",
+        channel: "public",
         setChannel: (channel: string) => set({ channel }),
       }));
 

@@ -204,6 +204,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
       }
     }
   };
+
   
 
   useEffect(() => {

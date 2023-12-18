@@ -22,6 +22,8 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     const [inviteToChannel, setInviteToChannel] = useState([]);
     const [channelWithIdAndName, setChannelWithIdAndName] = useState<any[]>([]); // list of channelsId
     const [acceptedChannels, setAcceptedChannels] = useState<any[]>([]); // list of channelsId
+    const [publicChannels, setPublicChannels] = useState<any[]>([]); // list of channelsId
+    const [isListChannel, setIsListChannel] = useState(false); // list of channelsId
    
     // TODO: add this to costum hook
     useEffect(() => {
@@ -65,23 +67,19 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         sender: username,
         channelId: channelId,
       });
-      socket.on("saveChannelName", (data) => {
-        // save data to state as array
-        setChannels([...channelWithIdAndName, channelName]);
-        setChannel(channelName);
-      });
-
+      setIsListChannel(true);
     }
   };
 
-  
-  // list all channels
-  useEffect(() => {
+
+
+  const listChannels = () => {
     if (username !== "") {
       socket.emit("listChannels", {
         sender: username,
       });
 
+      // list all owned channels
       socket.on("listChannels", (data :any) => {
         if (!data || data[0]?.user.username !== username ) return;
         data.map((channel: any) => {
@@ -91,6 +89,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         });
       });
 
+      // list all accepted channels
       socket.emit("listAcceptedChannels", {
         sender: username,
       });
@@ -107,32 +106,30 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           });
         })
       });
+
+      // list all public channels
+      socket.emit("listPublicChannels", {
+        sender: username,
+      });
+      socket.on("listPublicChannels", (data :any) => {        
+        setPublicChannels(data.filter((channel:any) => channel.name !== "general"));
+      });
+
     }
+  };
+
+  
+  // list all channels
+  useEffect(() => {
+    listChannels();
     return () => {
       socket.off("listChannels");
       socket.off("listAcceptedChannels");
       socket.off("getChannelById");
+      socket.off("listPublicChannels");
     };
   }, [username]);
 
-  // // LIST ACCEPTED CHANNELS
-  // useEffect(() => {
-  //    //TODO: HERE YOU WILL LIST ACCEPTED CHANNELS OF THE USER
-  //    socket.emit("listAcceptedChannels", {
-  //     sender: username,
-  //   });
-  //   socket.on("listAcceptedChannels", (data :any) => {
-  //     setChannelId(data[0]?.idOfChannel);
-  //   });
-  //   socket.emit("getChannelById", {
-  //     sender: username,
-  //     id: channelId,
-  //   })
-  //   socket.on("getChannelById", (data :any) => {
-  //     // save data to state as array
-  //     setAcceptedChannels((acceptedChannels) => [...acceptedChannels, data]);
-  //   })
-  // }, []);
 
   const InviteToChannel = (channelName: any, friend: string) => {
     setIsDirectMessage(false);
@@ -169,7 +166,6 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
   }
 
   const saveCurrentChannel = (channelName: string, id: string) => {
-    // alert("channelName: " + channelName + " id: " + id);
     setChannel(channelName);
     setChannelId(id);
     switchChannelName(channelName);
@@ -245,6 +241,22 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           ))}
           {
             acceptedChannels && acceptedChannels.map((channel, index) => (
+              <li
+                className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
+                key={channel.id}
+                onClick={() => saveCurrentChannel(channel.name, channel.id)}
+              >
+                <div className="flex justify-between">
+                  <p>
+                    # {channel.name}
+                  </p>
+                </div>
+              </li>
+            ))
+          }
+          {
+            publicChannels 
+            && publicChannels.map((channel, index) => (
               <li
                 className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
                 key={channel.id}
