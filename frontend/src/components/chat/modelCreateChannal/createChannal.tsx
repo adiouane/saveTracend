@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useChannleTypeStore } from "@/store/channelStore"
 
-export default function CreateChannal(props) {
+export default function CreateChannal(props : any) {
   const [showModal, setShowModal] = useState(false);
   const [channelName, setChannelName] = useState('');
-  const { channel, setChannel } = useChannleTypeStore()
+  const { channel, setChannel } = useChannleTypeStore(); // type of channel
+  const [password, setPassword] = useState('');
   
 
 
-  const handleInputChange = (event) => {
+  const handleInputChange = (event : any) => {
     setChannelName(event.target.value);
   };
 
@@ -19,15 +20,13 @@ export default function CreateChannal(props) {
       alert("Please enter fill required field");
       return;
     }
-    props.addChannel(channelName);
-    // Clear the input field
-    console.log("-------- channelType",channel)
-    console.log("-------- channelName",channelName)
+    props.addChannel(channelName, password);
     setChannelName('');
-
     // Close the modal
     setShowModal(false);
+    alert(channel)
   };
+
 
   return (
     <div>
@@ -78,7 +77,14 @@ export default function CreateChannal(props) {
             {
               channel === "protected" && (
                 <div>
-                  <input type="text" name="password" placeholder="password" className="bg-slate-900 w-full my-5 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-800"
+                  <input type="text" 
+                    name="password" 
+                    placeholder="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)
+                    
+                  }
+                  className="bg-slate-900 w-full my-5 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-800"
                   />
                 </div>
               )

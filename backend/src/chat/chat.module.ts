@@ -6,6 +6,7 @@ import { channelService } from './channel.service';
 import { directMessageService } from './directMessage.service';
 import { notificationService } from './notification.service';
 
+
 @Module({
   providers: [ChatGateway,
      ChatService, 

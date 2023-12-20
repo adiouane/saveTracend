@@ -43,7 +43,7 @@
     "src/components/chat/channal&MessageList/channal&directMessage.tsx",
     "src/components/chat/adminMembers/adminMembers.tsx",
     "src/components/chat/chatContent/chatContent.tsx",
-    "src/components/chat/modelCreateChannal/createChannal.jsx",
+    "src/components/chat/modelCreateChannal/createChannal.tsx",
     "src/app/chat/page.jsx",
     "src/components/chat/context/DirectMessageContext.tsx"
   ],

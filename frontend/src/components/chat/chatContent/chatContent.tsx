@@ -12,6 +12,7 @@ import useRecieverStore from "@/store/recieverStore";
 import useMessageStore from "@/store/messagesStore";
 import useUsernameStore from "@/store/usernameStore";
 import { fetchUser } from "@/services";
+import { send } from "process";
 
 type User = {
   username: string;
@@ -31,6 +32,10 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
   const [arrayMessages, setArrayMessages] = useState<any>([]);
   const [isBlockUser, setBlockUser] = useState(false);
   const [serverChannel, setServerChannel] = useState("");
+  const [password, setPassword] = useState("");
+  const [isProtected, setIsProtected] = useState(false);
+  const [isCorrectPassword, setIsCorrectPassword] = useState(false);
+  const [showWrongPassword, setShowWrongPassword] = useState(false);
 
   async function fetchUsername() {
     const storedUserData = sessionStorage.getItem("user-store");
@@ -77,7 +82,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
         message: messageInput,
       });
       socket.on("channelMessage", (data :any) => {
-        if (data) {
+        if (data && !isProtected) {
           handlelistChannelMessages();
         }
       });
@@ -98,6 +103,33 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     setMessageInput("");
   };
 
+  // ----------- check if channel is protected ----------------
+  const checkIfChannelIsProtected = () => {
+
+    console.log("checkIfChannelIsProtected")
+      socket.emit("checkPassword", {
+          channelId: channelId,
+          sender: username,
+          password: password
+         });
+      socket.on("checkPassword", (data) => {
+        if (data)
+        {
+          setIsProtected(false);
+          setIsCorrectPassword(true);
+          return;
+        }
+        else{
+          console.log("channel is protected and password is wrong1")
+          setIsCorrectPassword(false);
+          setShowWrongPassword(true);
+          return () => {
+            socket.off("checkPassword");
+          }
+        }
+      });
+  };
+
 
   
 
@@ -115,36 +147,43 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     });
     // List all messages from the channel
     socket.on("listChannelMessages", (data : any) => {
+
+
+      if (data.msg[0]?.channel?.visibility === "protected" && !isCorrectPassword){        
+        setIsProtected(true);
+        return;
+      }
+      else if (data.msg[0]?.channel?.visibility !== "protected" || isCorrectPassword){
+        setIsProtected(false);
       // Check if data.msg is an array before mapping
-      const serverChannel = data.msg[0]?.channel?.name;
-      // setServerChannel(serverChannel);
-      const staticChannelName = channel;
-      const usernameFromServer = data.msg[0]?.user?.username;
-      const usernameFromSession = username;
+        const serverChannel = data.msg[0]?.channel?.name;
+        const staticChannelName = channel;
+        const usernameFromServer = data.msg[0]?.user?.username;
+        const usernameFromSession = username;
 
-
-        if (data.msg.length === 0 || serverChannel !== staticChannelName) {
-          //todo i stoped here
-          setSenderMessages([]);
-          setRecieverMessages([]);
-          setArrayMessages([]);
-          return
-        } else if (serverChannel === staticChannelName){
-          
-          if (usernameFromServer !== usernameFromSession) {
-            // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
-            setSenderMessages(data.msg);
-            setAvaterUser(data.msg[0]?.user.avatarUrl);
-            setNameUser(user?.username);
-            // clear the reciever messages
-            setRecieverMessages([]);
-          } else {
-            setRecieverMessages(data.msg);
-            setAvaterReciever(data.msg[0]?.user.avatarUrl);
-            setNameUser(user?.username);
-            // clear the sender messages
+          if (data.msg.length === 0 || serverChannel !== staticChannelName) {
+            //todo i stoped here
             setSenderMessages([]);
-          }
+            setRecieverMessages([]);
+            setArrayMessages([]);
+            return
+          } else if (serverChannel === staticChannelName){
+            
+            if (usernameFromServer !== usernameFromSession) {
+              // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
+              setSenderMessages(data.msg);
+              setAvaterUser(data.msg[0]?.user.avatarUrl);
+              setNameUser(user?.username);
+              // clear the reciever messages
+              setRecieverMessages([]);
+            } else {
+              setRecieverMessages(data.msg);
+              setAvaterReciever(data.msg[0]?.user.avatarUrl);
+              setNameUser(user?.username);
+              // clear the sender messages
+              setSenderMessages([]);
+            }
+        }
       }
     });
     return () => {
@@ -210,14 +249,9 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
   useEffect(() => {
     // handle online/offline status
     socket.emit("onlineStatus", { username: username, status: "online" });
-    // socket.on("onlineStatus", (data : any) => {
-    //   alert(data.status)
-    // });
-
     // if user click on close tab or change the url set the status to offline
     window.addEventListener('beforeunload', () => {
       socket.emit("onlineStatus", { username: username, status: "offline" });
-      // alert("you are offline");
     });
 
     if (isDirectMessage) {
@@ -235,7 +269,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     channelId,
     username,
     reciever,
-    // serverChannel,
+    isCorrectPassword,
     ]);
 
 
@@ -291,7 +325,39 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
         // channel messages
         <div className=" p-14 flex-1 overflow-auto">
           <div className="flex flex-col mb-4 text-sm">
-            {senderMessages.map((message, index) => (
+            {
+              isProtected && !isCorrectPassword &&
+              (
+                 // input to enter the password
+
+                <div className="flex items-center justify-center my-60">
+                  <div className="flex items-center">
+                    <div className="flex items-center justify-between">
+                    <input type="text" 
+                      name="password" 
+                      placeholder="Enter password ..."
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      // onKeyDown={checkIfChannelIsProtected}
+                      className="bg-slate-900 w-full my-5 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-800"
+                      />
+                      <button className="bg-blue-500 hover:bg-blue-700 ml-2 text-white font-bold py-2 px-4 rounded"
+                      onClick={checkIfChannelIsProtected}
+                      >
+                        Enter
+                      </button>
+                      </div>
+                      { showWrongPassword &&
+                      <div>
+                        <span className="text-red-500 font-bold ml-5 mr-5">wrong password</span>
+                      </div>
+                      }
+                  </div>
+                </div>
+              )
+            }
+            { !isProtected && 
+            senderMessages.map((message, index) => (
               <div key={index} >
                 <div className="flex items-center">
                   <img
@@ -309,7 +375,8 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
                 </p>
               </div>
             ))}
-            {recieverMessages.map((message, index) => (
+            { !isProtected &&
+            recieverMessages.map((message, index) => (
                 <div key={index}>
                 <div className="flex items-center">
                   <img

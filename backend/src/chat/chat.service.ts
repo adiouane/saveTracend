@@ -10,12 +10,4 @@ export class ChatService {
     return "message"
   }
 
-  // findAll() {
-  //   return `This action returns all chat`;
-  // }
-
-  // findOne(id: number) {
-  //   return `This action returns a #${id} chat`;
-  // }
-
 }

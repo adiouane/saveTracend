@@ -12,6 +12,8 @@ import { channelService } from './channel.service';
 import { directMessageService } from './directMessage.service';
 import { notificationService } from './notification.service';
 import { emit } from 'process';
+import * as bcrypt from 'bcrypt';
+
 
 @WebSocketGateway({
   cors: {
@@ -113,8 +115,13 @@ export class ChatGateway {
       return;
     }
     if(data.password){
+      // firt we will hash the password
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(data.password, salt);
+      data.password = hashedPassword;
+      // then we will save the channel in the db
+
       // case of protected channel
-      console.log("passowrd", data.password)
       const user = await this.prisma.user.findUnique({
         where: {
           username: data.sender,
@@ -176,6 +183,38 @@ export class ChatGateway {
       this.server.emit('saveChannelName', saveChannel);
       console.log('saveChannel', saveChannel);
       return saveChannel;
+    }
+  }
+
+  // check if password is correct
+  @SubscribeMessage('checkPassword')
+  async checkPassword(
+    @MessageBody()
+    data: {
+      password: string;
+      channelId: string;
+      sender: string;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const channel = await this.prisma.channel.findUnique({
+      where: {
+        id: data.channelId,
+      },
+    });
+    if (!channel) {
+      console.log('Channel not found checkPassword data');
+      return;
+    }
+    const checkPassword = await bcrypt.compare(data.password, channel.password);
+    if (checkPassword) {
+      console.log('password is correct');
+      this.server.emit('checkPassword', checkPassword);
+      return checkPassword;
+    } else {
+      console.log('password is incorrect');
+      this.server.emit('checkPassword', checkPassword);
+      return checkPassword;
     }
   }
 

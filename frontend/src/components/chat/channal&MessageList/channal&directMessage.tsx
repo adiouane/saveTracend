@@ -13,7 +13,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
 
     const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
     
-    const { channel, setChannel } = useChannleTypeStore(); // channel type
+    const { channel, setChannel } = useChannleTypeStore(); // channel name
     const { channelId, setChannelId } = useChannleIdStore(); // channel id
     const [channels, setChannels] = useState<string[]>([]); // list of channels
     const {username, setUsername} =  useUsernameStore();
@@ -24,7 +24,8 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     const [acceptedChannels, setAcceptedChannels] = useState<any[]>([]); // list of channelsId
     const [publicChannels, setPublicChannels] = useState<any[]>([]); // list of channelsId
     const [isListChannel, setIsListChannel] = useState(false); // list of channelsId
-   
+    const [protectedChannel, setProtectedChannel] = useState<any[]>([]); // list of channelsId
+    const [password, setPassword] = useState(''); // list of channelsId
     // TODO: add this to costum hook
     useEffect(() => {
       // Search for the username and set it in the state
@@ -48,29 +49,27 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
       }
   
       fetchUsername(); // Fetch the username
-  
-      // Return a cleanup function if needed (e.g., to unsubscribe from listeners)
-      return () => {
-        // Clean up any event listeners or subscriptions
-      };
     }, []); // Empty dependency array to run this effect only once
 
 
   // This function will be passed as a prop to Child1
-  const addChannel = (channelName: any) => {
+  const addChannel = (channelName: any, password: any) => {
     // Add the new channel name to the existing list of channels
     setChannels([...channelWithIdAndName, channelName]);
+    // encrypt password using nestjs bcrypt
+    // const encreptPassword = btoa(password);
+    setPassword(password);
     if (username !== "") {
       socket.emit("saveChannelName", {
         channel: channelName,
         channelType: channel,
         sender: username,
         channelId: channelId,
+        password: password,
       });
       setIsListChannel(true);
     }
   };
-
 
 
   const listChannels = () => {
@@ -83,7 +82,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
       socket.on("listChannels", (data :any) => {
         if (!data || data[0]?.user.username !== username ) return;
         data.map((channel: any) => {
-          if (channel.name === "general") return;
+          if (channel.name === "general" || channel.visibility === "protected") return; // becuase protected channel will be listed in the protected channel list
           // save data to state as array
           setChannelWithIdAndName((channelWithIdAndName) => [...channelWithIdAndName, channel]);
         });
@@ -115,6 +114,13 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         setPublicChannels(data.filter((channel:any) => channel.name !== "general"));
       });
 
+      // list all protected channels
+      socket.emit("listProtectedChannels", {
+        sender: username,
+      });
+      socket.on("listProtectedChannels", (data :any) => {        
+        setProtectedChannel(data.filter((channel:any) => channel.name !== "general"));
+      });
     }
   };
 
@@ -203,7 +209,8 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
             Channels
           </div>
           <div>
-            <CreateChannal addChannel={addChannel} />
+            <CreateChannal addChannel={addChannel}
+             />
           </div>
         </div>
         <div
@@ -265,6 +272,22 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
                 <div className="flex justify-between">
                   <p>
                     # {channel.name}
+                  </p>
+                </div>
+              </li>
+            ))
+          }
+          {
+            protectedChannel 
+            && protectedChannel.map((channel, index) => (
+              <li
+                className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
+                key={channel.id}
+                onClick={() => saveCurrentChannel(channel.name, channel.id)}
+              >
+                <div className="flex justify-between">
+                  <p>
+                  🔒 {channel.name}
                   </p>
                 </div>
               </li>
