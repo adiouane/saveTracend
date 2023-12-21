@@ -36,6 +36,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
   const [isProtected, setIsProtected] = useState(false);
   const [isCorrectPassword, setIsCorrectPassword] = useState(false);
   const [showWrongPassword, setShowWrongPassword] = useState(false);
+  const [youAreBaned, setYouAreBaned] = useState(false);
 
   async function fetchUsername() {
     const storedUserData = sessionStorage.getItem("user-store");
@@ -130,70 +131,9 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
       });
   };
 
+   //----------- handle block user ----------------
 
-  
-
-  //----------- handle list channel messages ----------------
-
-  const handlelistChannelMessages = () => {
-      // Join the channel
-    socket.emit("joinChannel", { channel: channel });
-    
-    // Send event to get all messages from the channel
-    socket.emit("listChannelMessages", {
-      sender: username,
-      channel: channel,
-      channelId: channelId,
-    });
-    // List all messages from the channel
-    socket.on("listChannelMessages", (data : any) => {
-
-
-      if (data.msg[0]?.channel?.visibility === "protected" && !isCorrectPassword){        
-        setIsProtected(true);
-        return;
-      }
-      else if (data.msg[0]?.channel?.visibility !== "protected" || isCorrectPassword){
-        setIsProtected(false);
-      // Check if data.msg is an array before mapping
-        const serverChannel = data.msg[0]?.channel?.name;
-        const staticChannelName = channel;
-        const usernameFromServer = data.msg[0]?.user?.username;
-        const usernameFromSession = username;
-
-          if (data.msg.length === 0 || serverChannel !== staticChannelName) {
-            //todo i stoped here
-            setSenderMessages([]);
-            setRecieverMessages([]);
-            setArrayMessages([]);
-            return
-          } else if (serverChannel === staticChannelName){
-            
-            if (usernameFromServer !== usernameFromSession) {
-              // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
-              setSenderMessages(data.msg);
-              setAvaterUser(data.msg[0]?.user.avatarUrl);
-              setNameUser(user?.username);
-              // clear the reciever messages
-              setRecieverMessages([]);
-            } else {
-              setRecieverMessages(data.msg);
-              setAvaterReciever(data.msg[0]?.user.avatarUrl);
-              setNameUser(user?.username);
-              // clear the sender messages
-              setSenderMessages([]);
-            }
-        }
-      }
-    });
-    return () => {
-      socket.off("listChannelMessages");
-    };
-  };
-
-  //----------- handle block user ----------------
-
-  const handleBlockUser = () => {
+   const handleBlockUser = () => {
     socket.emit("getblockUser",  {username: username});
     socket.on("getblockUser", (data) => {
       if (data.length === 0) {
@@ -220,6 +160,103 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     });
   };
 
+  
+
+  //----------- handle list channel messages ----------------
+
+  const handlelistChannelMessages = () => {
+      // Join the channel
+    socket.emit("joinChannel", { channel: channel });
+    
+    // Send event to get all messages from the channel
+    socket.emit("listChannelMessages", {
+      sender: username,
+      channel: channel,
+      channelId: channelId,
+    });
+    // List all messages from the channel
+    socket.on("listChannelMessages", (data : any) => {
+
+      handleBlockUser();
+      
+    
+
+        if (data.msg[0]?.channel?.visibility === "protected" && !isCorrectPassword){        
+          setIsProtected(true);
+          return;
+        }
+        else if (data.msg[0]?.channel?.visibility !== "protected" || isCorrectPassword){
+          setIsProtected(false);
+        // Check if data.msg is an array before mapping
+          const serverChannel = data.msg[0]?.channel?.name;
+          const staticChannelName = channel;
+          const usernameFromServer = data.msg[0]?.user?.username;
+          const usernameFromSession = username;
+
+            if (data.msg.length === 0 || serverChannel !== staticChannelName) {
+              //todo i stoped here
+              setSenderMessages([]);
+              setRecieverMessages([]);
+              setArrayMessages([]);
+              return
+            }
+            else if (youAreBaned){
+              // set a default message to show that you are baned
+              let banedMessage = {
+                user: {
+                  username: "banned user",
+                  avatarUrl: "https://static.vecteezy.com/system/resources/previews/011/912/911/non_2x/banned-poster-red-sign-locked-warning-about-blocking-online-content-deleting-user-from-social-network-account-restricting-information-web-channel-banning-use-negative-materials-vector.jpg"
+                },
+                message: "",
+                channel: "baned",
+                sender: "banned user"
+              }
+              // setSenderMessages([banedMessage]);
+              setRecieverMessages([banedMessage]);
+              return
+            } else if (serverChannel === staticChannelName){
+              
+              if (usernameFromServer !== usernameFromSession) {
+                // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
+                setSenderMessages(data.msg);
+                setAvaterUser(data.msg[0]?.user.avatarUrl);
+                setNameUser(user?.username);
+                // clear the reciever messages
+                setRecieverMessages([]);
+              } else {
+                if (!isBlockUser){
+                  let emptyMessage = {
+                    user: {
+                      username: "no messages",
+                      avatarUrl: "https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png"
+                    },
+                    message: "blocked user, no messages",
+                    channel: "blocked user, no messages",
+                    sender: "blocked user, no messages"
+                  }
+                  // setSenderMessages([emptyMessage]);
+                  setRecieverMessages([emptyMessage]);
+          
+                  return;
+                }else{
+                setRecieverMessages(data.msg);
+                setAvaterReciever(data.msg[0]?.user.avatarUrl);
+                setNameUser(user?.username);
+                // clear the sender messages
+                setSenderMessages([]);
+                }
+              }
+          }
+        
+    }
+    });
+    return () => {
+      socket.off("listChannelMessages");
+    };
+  };
+
+ 
+
   //----------- handle list direct messages ----------------
 
   const handlelistDirectMessages = () => {
@@ -244,6 +281,24 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     }
   };
 
+  //----------- check if the user is baned ----------------
+  const checkIfTheUserIsBaned = () => {
+    socket.emit("checkIfTheUserIsBaned", {sender: username, channelId: channelId});
+    socket.on("checkIfTheUserIsBaned", (data) => {
+      console.log("channel in client", channel, "channel in server", data?.channel?.name
+      , "username in client", username, "username in server", data?.user?.username,
+      "isBaned", data?.isBanned
+      )
+      if (data && data?.user?.username === username
+        && data?.channel?.name === channel
+        && data?.isBanned === true){
+        setYouAreBaned(true);
+      }
+      else{
+        setYouAreBaned(false);
+      }
+    });
+  }
   
 
   useEffect(() => {
@@ -257,6 +312,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     if (isDirectMessage) {
       handlelistDirectMessages();
     }else{
+      checkIfTheUserIsBaned();
       handlelistChannelMessages();
     }
     return () => {
@@ -270,6 +326,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     username,
     reciever,
     isCorrectPassword,
+    youAreBaned,
     ]);
 
 
@@ -377,7 +434,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
             ))}
             { !isProtected &&
             recieverMessages.map((message, index) => (
-                <div key={index}>
+              <div key={index}>
                 <div className="flex items-center">
                   <img
                     src={message.user?.avatarUrl}
@@ -394,14 +451,16 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
                 </p>
               </div>
             ))}
+            
           </div>
         </div>
       )}
 
       {/* <!-- Chat input --> */}
-      <div className="pb-6 px-4 flex-none">
+      {  !isProtected && 
+        <div className="pb-6 px-4 flex-none">
         <div className="flex rounded-3xl  overflow-hidden ml-20 mr-20">
-          <input
+            <input
             type="text"
             spellCheck="false"
             className="w-full border-none px-4 bg-slate-800  "
@@ -409,7 +468,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyDown}
-          />
+            />
           <span className="text-3xl text-grey p-2 bg-slate-800"
           onClick={sendMessage}
           >
@@ -421,15 +480,16 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
               xmlns="http://www.w3.org/2000/svg"
               className="fill-current h-6 w-6 block bg-slate-800 cursor-pointer hover:text-white"
               values={messageInput}
-            >
+              >
               <path
                 d="M11.361 9.94977L3.82898 11.2058C3.74238 11.2202 3.66112 11.2572 3.59336 11.313C3.5256 11.3689 3.47374 11.4415 3.44298 11.5238L0.845978 18.4808C0.597978 19.1208 1.26698 19.7308 1.88098 19.4238L19.881 10.4238C20.0057 10.3615 20.1105 10.2658 20.1838 10.1472C20.2571 10.0287 20.2959 9.89212 20.2959 9.75277C20.2959 9.61342 20.2571 9.47682 20.1838 9.3583C20.1105 9.23978 20.0057 9.14402 19.881 9.08177L1.88098 0.0817693C1.26698 -0.225231 0.597978 0.385769 0.845978 1.02477L3.44398 7.98177C3.47459 8.06418 3.5264 8.13707 3.59417 8.19307C3.66193 8.24908 3.74327 8.28623 3.82998 8.30077L11.362 9.55577C11.4083 9.56389 11.4503 9.58809 11.4806 9.62413C11.5109 9.66016 11.5275 9.70571 11.5275 9.75277C11.5275 9.79983 11.5109 9.84538 11.4806 9.88141C11.4503 9.91745 11.4083 9.94165 11.362 9.94977H11.361Z"
                 fill="#8BABD8"
-              />
+                />
             </svg>
           </span>
         </div>
       </div>
+      }
       
     </div>
   );

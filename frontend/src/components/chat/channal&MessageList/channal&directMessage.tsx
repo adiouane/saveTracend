@@ -23,31 +23,31 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     const [channelWithIdAndName, setChannelWithIdAndName] = useState<any[]>([]); // list of channelsId
     const [acceptedChannels, setAcceptedChannels] = useState<any[]>([]); // list of channelsId
     const [publicChannels, setPublicChannels] = useState<any[]>([]); // list of channelsId
-    const [isListChannel, setIsListChannel] = useState(false); // list of channelsId
     const [protectedChannel, setProtectedChannel] = useState<any[]>([]); // list of channelsId
     const [password, setPassword] = useState(''); // list of channelsId
+    const [listOwnedOnce, setListOwnedOnce] = useState(false); // list of channelsId
+    
     // TODO: add this to costum hook
-    useEffect(() => {
-      // Search for the username and set it in the state
-      async function fetchUsername() {
-        const storedUserData = sessionStorage.getItem("user-store");
-        if (storedUserData) {
-          try {
-            // Parse the stored data as JSON
-            const userData = await JSON.parse(storedUserData);
-  
-            // Access the username property
-            const saveusername = userData.state.user.username;
-  
-            setUsername(saveusername);
-          } catch (error) {
-            console.error("Error parsing stored data:", error);
-          }
-        } else {
-          console.warn("User data not found in session storage.");
+    async function fetchUsername() {
+      const storedUserData = sessionStorage.getItem("user-store");
+      if (storedUserData) {
+        try {
+          // Parse the stored data as JSON
+          const userData = await JSON.parse(storedUserData);
+
+          // Access the username property
+          const saveusername = userData.state.user.username;
+
+          setUsername(saveusername);
+        } catch (error) {
+          console.error("Error parsing stored data:", error);
         }
+      } else {
+        console.warn("User data not found in session storage.");
       }
-  
+    }
+    
+    useEffect(() => {  
       fetchUsername(); // Fetch the username
     }, []); // Empty dependency array to run this effect only once
 
@@ -57,7 +57,6 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     // Add the new channel name to the existing list of channels
     setChannels([...channelWithIdAndName, channelName]);
     // encrypt password using nestjs bcrypt
-    // const encreptPassword = btoa(password);
     setPassword(password);
     if (username !== "") {
       socket.emit("saveChannelName", {
@@ -67,53 +66,65 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
         channelId: channelId,
         password: password,
       });
-      setIsListChannel(true);
     }
   };
 
+  const listOwnedChannels = () => {
+    socket.emit("listChannels", {
+      sender: username,
+    });
 
-  const listChannels = () => {
-    if (username !== "") {
-      socket.emit("listChannels", {
-        sender: username,
+    // list all owned channels
+    socket.on("listChannels", (data :any) => {
+      if (!data || data[0]?.user.username !== username ) return;
+      data.map((channel: any) => {
+        if (channel.name === "general" || channel.visibility === "protected" ) return; // becuase protected channel will be listed in the protected channel list
+        // save data to state as array
+        setChannelWithIdAndName((channelWithIdAndName) => [...channelWithIdAndName, channel]);
       });
+    });
+    return () => {
+      socket.off("listChannels");
+    }
+  };
 
-      // list all owned channels
-      socket.on("listChannels", (data :any) => {
-        if (!data || data[0]?.user.username !== username ) return;
-        data.map((channel: any) => {
-          if (channel.name === "general" || channel.visibility === "protected") return; // becuase protected channel will be listed in the protected channel list
-          // save data to state as array
-          setChannelWithIdAndName((channelWithIdAndName) => [...channelWithIdAndName, channel]);
-        });
-      });
-
-      // list all accepted channels
-      socket.emit("listAcceptedChannels", {
-        sender: username,
-      });
-      socket.on("listAcceptedChannels", (data :any) => {  
+  const listAcceptedChannels = () => {
+    // list all accepted channels
+    socket.emit("listAcceptedChannels", {
+      sender: username,
+    });
+    socket.on("listAcceptedChannels", (data :any) => { 
+        for (let i = 0; i < data.length; i++) {   
         socket.emit("getChannelById", {
           sender: username,
-          id: data[0]?.idOfChannel,
+          id: data[i]?.idOfChannel,
         })
         socket.on("getChannelById", (data :any) => {
-          // save data to state as array with checkin if the channel is already exist in the state and remove it if it does
-          setAcceptedChannels((prevAcceptedChannels) => {
-            const isAcceptedChannelExist = prevAcceptedChannels.some((ac) => ac.id === data.id);
-            return isAcceptedChannelExist ? prevAcceptedChannels : [...prevAcceptedChannels, data];
-          });
+          if (data?.user?.username !== username) {
+            fetchUsername(); // i got undefined username so i have to fetch it again
+          }
+          setAcceptedChannels((acceptedChannels) => [...acceptedChannels, data].filter((v, i, a) => a.findIndex(t => (t?.id === v?.id)) === i));
         })
-      });
+      }
+    });
+  };
 
-      // list all public channels
-      socket.emit("listPublicChannels", {
-        sender: username,
-      });
-      socket.on("listPublicChannels", (data :any) => {        
-        setPublicChannels(data.filter((channel:any) => channel.name !== "general"));
-      });
+  const listPublicChannels = () => {
+     // list all public channels
+     socket.emit("listPublicChannels", {
+      sender: username,
+    });
+    socket.on("listPublicChannels", (data :any) => {  
+      if (data?.user?.username !== username) {
+        fetchUsername(); // i got undefined username so i have to fetch it again
+      }      
+      setPublicChannels(data.filter((channel:any) => channel.name !== "general"));
+    });
 
+  };
+
+  const listProtectedChannels = () => {
+     
       // list all protected channels
       socket.emit("listProtectedChannels", {
         sender: username,
@@ -121,13 +132,21 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
       socket.on("listProtectedChannels", (data :any) => {        
         setProtectedChannel(data.filter((channel:any) => channel.name !== "general"));
       });
-    }
   };
+
+
 
   
   // list all channels
   useEffect(() => {
-    listChannels();
+    if (username === "") return;
+    listOwnedChannels(); // FIXME: IF I REFRESH THE PAGE THE CHANNELS WILL BE DUPLICATED IN MY FRINDS PAGE
+    listAcceptedChannels();
+    listPublicChannels();
+    listProtectedChannels();
+    
+   
+    
     return () => {
       socket.off("listChannels");
       socket.off("listAcceptedChannels");
@@ -136,8 +155,19 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
     };
   }, [username]);
 
+  // leave channel
+  const leaveChannel = (channelId: string) => {
+    // socket.emit("leaveChannel", {
+    //   sender: username,
+    //   channelId: channelId,
+    // });
+    alert("logout");
+  };
 
-  const InviteToChannel = (channelName: any, friend: string) => {
+
+
+
+  const InviteToChannel = (channelName: any, friend: string) => {   
     setIsDirectMessage(false);
     if (channelName === "general") return;
     socket.emit("sendInviteToChannel", {
@@ -365,6 +395,19 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           </span>
         </div>
         <ListUsersFriends username={username} />
+      {
+        !isDirectMessage && (
+          <div className="absolute bottom-0 left-0 z-10 ml-10">
+
+          <button className="bg-red-500 hover:bg-red-700 text-white font-thin pl-36 pr-36 ml-6 mb-1 py-0 rounded-full "
+            onClick={() => leaveChannel(channelId)
+            }
+            >
+            logout
+          </button>
+          </div>
+        )
+      }
       </div>
     </div>
   );

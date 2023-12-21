@@ -235,15 +235,6 @@ export class notificationService {
             });
 
             if (isexist) {
-                // update status
-                // const updateStatus = await this.prisma.acceptedChannelInvite.update({
-                //     where: {
-                //         id: isexist.id,
-                //     },
-                //     data: {
-                //         idOfChannel: data.channelId,
-                //     },
-                // });
                 return isexist;
             }
 
@@ -252,11 +243,19 @@ export class notificationService {
                     userId: reciverUser.id,
                     channelId: channel.id,
                     idOfChannel: data.channelId,
+                    role: "member",
+                },
+            });
+
+            // create membership for the user as a member
+            const membership = await this.prisma.channelMembership.create({
+                data: {
+                    userId: reciverUser.id,
+                    channelId: channel.id,
+                    roleId: "member",
                 },
             });
             return invite;
-          
-            
         }
         catch(err){
             throw err;

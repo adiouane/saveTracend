@@ -59,7 +59,6 @@ const Notification = ({ user }: { user: any }) => {
   }
 
   const saveNewChannelToDB = async (channelName: string) => {
-    // alert("userWhoSendInvite: " + userWhoSendInvite + " channelName: " + channelName + " idOfChannel: " + idOfChannel + " userWhoWillaAcceptInvite: " + userWhoWillaAcceptInvite)
    // update channel status to accepted
     socket.emit("sendInviteToChannel", {
       sender: userWhoSendInvite,
@@ -68,12 +67,8 @@ const Notification = ({ user }: { user: any }) => {
       status: "accepted", 
     });
     socket.on("sendInviteToChannel", (data : any) => {
-      console.log("accepted sender status  : " + data.status)
-      console.log("accepted channel id  : " + data.channelId)
-      console.log("accepted channel name  : " + data.channel.name)
       socket.emit("saveAcceptedChannelToDB", {
         friend: userWhoWillaAcceptInvite,
-        // channel: channelName,
         status: data.status, 
         channelId: data.channelId
       })
@@ -149,7 +144,7 @@ const Notification = ({ user }: { user: any }) => {
           )}
         </div>
            {
-           channelname &&  user?.username !== userWhoSendInvite &&
+           channelname &&  user?.username !== userWhoSendInvite && notificationForFriend &&
             (
               <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
                     <p className="mx-2 text-sm text-gray-800 dark:text-gray-200"> <span

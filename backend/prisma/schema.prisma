@@ -33,7 +33,6 @@ model User {
   blocker                BlockedUsers[]   @relation("blocker")
   getblocked             BlockedUsers[]   @relation("Getblocked")
 
-
 }
 
 model Channel {
@@ -42,6 +41,8 @@ model Channel {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   visibility     String @default("public")
+  role           String @default("owner")
+  // connect        Boolean       @default(false)    
   password       String?
   ChannelMessage ChannelMessage[]
   userId         String
@@ -64,6 +65,7 @@ model acceptedChannelInvite {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   idOfChannel String
+  role      String @default("member")
   channelId String
   user      User     @relation(fields: [userId], references: [id])
   userId    String
@@ -73,7 +75,7 @@ model ChannelMembership {
   id             String   @id @default(uuid())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  roleId         String   @default("owner")
+  roleId         String   @default("member")
   isAdmin        Boolean  @default(false)
   isKicked       Boolean  @default(false)
   isBanned       Boolean  @default(false)
