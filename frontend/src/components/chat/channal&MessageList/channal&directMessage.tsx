@@ -156,11 +156,12 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
   }, [username]);
 
   // leave channel
-  const leaveChannel = (channelId: string) => {
-    // socket.emit("leaveChannel", {
-    //   sender: username,
-    //   channelId: channelId,
-    // });
+  const leaveChannel = (channelId: string, username: string) => {
+    alert("user :" + username + " leave channel: " + channelId)
+    socket.emit("leaveChannel", {
+      channelId: channelId,
+      sender: username,
+    });
     alert("logout");
   };
 
@@ -259,13 +260,13 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           {channelWithIdAndName.map((channel, index) => (
             <li
               className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
-              key={channel.id}
-              onClick={() => saveCurrentChannel(channel.name, channel.id)}
+              key={channel?.id}
+              onClick={() => saveCurrentChannel(channel.name, channel?.id)}
             >
 
               <div className="flex justify-between">
                 <p>
-                  # {channel.name}
+                  # {channel?.name}
                 </p>
                 <span
                 onClick={() => listFriends()}>
@@ -280,12 +281,12 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
             acceptedChannels && acceptedChannels.map((channel, index) => (
               <li
                 className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
-                key={channel.id}
-                onClick={() => saveCurrentChannel(channel.name, channel.id)}
+                key={channel?.id}
+                onClick={() => saveCurrentChannel(channel.name, channel?.id)}
               >
                 <div className="flex justify-between">
                   <p>
-                    # {channel.name}
+                    # {channel?.name}
                   </p>
                 </div>
               </li>
@@ -296,12 +297,12 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
             && publicChannels.map((channel, index) => (
               <li
                 className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
-                key={channel.id}
-                onClick={() => saveCurrentChannel(channel.name, channel.id)}
+                key={channel?.id}
+                onClick={() => saveCurrentChannel(channel.name, channel?.id)}
               >
                 <div className="flex justify-between">
                   <p>
-                    # {channel.name}
+                    # {channel?.name}
                   </p>
                 </div>
               </li>
@@ -312,8 +313,8 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
             && protectedChannel.map((channel, index) => (
               <li
                 className="bg-teal-dark py-4 px-4 text-gray-400 font-bold  hover:bg-slate-700 hover:text-white hover:opacity-100 rounded-2xl cursor-pointer"
-                key={channel.id}
-                onClick={() => saveCurrentChannel(channel.name, channel.id)}
+                key={channel?.id}
+                onClick={() => saveCurrentChannel(channel.name, channel?.id)}
               >
                 <div className="flex justify-between">
                   <p>
@@ -400,7 +401,7 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
           <div className="absolute bottom-0 left-0 z-10 ml-10">
 
           <button className="bg-red-500 hover:bg-red-700 text-white font-thin pl-36 pr-36 ml-6 mb-1 py-0 rounded-full "
-            onClick={() => leaveChannel(channelId)
+            onClick={() => leaveChannel(channelId, username)
             }
             >
             logout

@@ -939,7 +939,7 @@ export class ChatGateway {
       console.log('member not found', checkMember2);
       return;
     }
-    
+
     if (data.Muted) {
       console.log("data.isMuted", data.Muted)
       const isMutedMember2 = await this.prisma.channelMembership.update({
@@ -1062,36 +1062,104 @@ export class ChatGateway {
   
 
   // leaveChannel
-  // @SubscribeMessage('leaveChannel')
-  // async leaveChannel(
-  //   @MessageBody()
-  //   data: {
-  //     channelId: string;
-  //     sender: string;
-  //   },
-  //   @ConnectedSocket() client: Socket,
-  // ) {
-  //   const user = await this.prisma.user.findUnique({
-  //     where: {
-  //       username: data.sender,
-  //     },
-  //   });
-  //   const channel = await this.prisma.channel.findUnique({
-  //     where: {
-  //       id: data.channelId,
-  //     },
-  //   });
-  //   const leaveChannel = await this.prisma.channel.update({
-  //     where: {
-  //       id: channel.id,
-  //     },
-  //     data: {
-  //       connect: ture
-  //     },
-  //   });
-  //   this.server.emit('leaveChannel', leaveChannel);
-  //   return leaveChannel;
-  // }
+  @SubscribeMessage('leaveChannel')
+  async leaveChannel(
+    @MessageBody()
+    data: {
+      channelId: string;
+      sender: string;
+    },
+    @ConnectedSocket() client: Socket,
+    ) {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.sender,
+        },  
+      });  
+      const channel = await this.prisma.channel.findUnique({
+        where: {
+        id: data.channelId,
+      },  
+    });  
+
+    // check if user is owner of the channel if yes delete the channel
+    const checkOwner = await this.prisma.channel.findFirst({
+      where: {
+        id: channel.id,
+        userId: user.id,
+        role: 'owner',
+      },
+    });
+
+    
+    if (checkOwner) {
+      // delete the channel from the user
+      const deleteChannel = await this.prisma.channelMembership.deleteMany({
+        where: {
+          userId: user.id,
+          channelId: channel.id,
+        },  
+      });  
+  
+      // delete the channel from the user
+      const deleteAcceptedChannelInvite = await this.prisma.acceptedChannelInvite.deleteMany({
+        where: {
+          userId: user.id,
+          channelId: channel.id,
+        },  
+      });  
+  
+      // delete the channel from the user
+      const deleteChannelMessage = await this.prisma.channelMessage.deleteMany({
+        where: {
+          channelId: channel.id,
+        },  
+      });  
+  
+      // delete the channel from the user
+      const deleteChannelInvite = await this.prisma.channelInvite.deleteMany({
+        where: {
+          channelId: channel.id,
+        },  
+      });  
+  
+      
+      // delete the channel from the user
+      const deleteChannelMembership2 = await this.prisma.channelMembership.deleteMany({
+        where: {
+          channelId: channel.id,
+        },  
+      });  
+      const deleteChannelOwnership = await this.prisma.channel.delete({
+        where: {
+          id: channel.id,
+        },  
+      });  
+      this.server.emit('leaveChannel', deleteChannelOwnership);
+      return deleteChannelOwnership;
+    }  
+
+    // ------- if user is member delete the channel from channelMembership ----
+
+     // delete the channel from the user
+     const deleteChannel = await this.prisma.channelMembership.deleteMany({
+      where: {
+        userId: user.id,
+        channelId: channel.id,
+      },  
+    });  
+
+    // delete the channel from the user
+    const deleteAcceptedChannelInvite = await this.prisma.acceptedChannelInvite.deleteMany({
+      where: {
+        userId: user.id,
+        channelId: channel.id,
+      },  
+    });  
+    
+    this.server.emit('leaveChannel', deleteChannel);
+
+  }
 
   //------------------------end channel------------------------
 
