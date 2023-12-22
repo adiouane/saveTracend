@@ -3,7 +3,7 @@ import "./chatContent.css";
 
 import TopBar from "./topbar/topbar";
 
-import { use, useEffect } from "react";
+import { useEffect } from "react";
 import { useState } from "react";
 import socket from "@services/socket";
 import { useIsDirectMessage } from "@/store/userStore";
@@ -11,8 +11,7 @@ import { useChannleTypeStore } from "@/store/channelStore";
 import useRecieverStore from "@/store/recieverStore";
 import useMessageStore from "@/store/messagesStore";
 import useUsernameStore from "@/store/usernameStore";
-import { fetchUser } from "@/services";
-import { send } from "process";
+
 
 type User = {
   username: string;
@@ -37,6 +36,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
   const [isCorrectPassword, setIsCorrectPassword] = useState(false);
   const [showWrongPassword, setShowWrongPassword] = useState(false);
   const [youAreBaned, setYouAreBaned] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   async function fetchUsername() {
     const storedUserData = sessionStorage.getItem("user-store");
@@ -75,7 +75,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     // Send the message input to the serv   
     if (messageInput === "") return;
     
-    if (!isDirectMessage) {
+    if (!isDirectMessage && !isMuted && !isBlockUser && !youAreBaned) {
       socket.emit("channelMessage", {
         sender: username,
         channel: channel,
@@ -179,8 +179,6 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
 
       handleBlockUser();
       
-    
-
         if (data.msg[0]?.channel?.visibility === "protected" && !isCorrectPassword){        
           setIsProtected(true);
           return;
@@ -200,7 +198,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
               setArrayMessages([]);
               return
             }
-            else if (youAreBaned){
+            else if (youAreBaned && channel !== "general"){
               // set a default message to show that you are baned
               let banedMessage = {
                 user: {
@@ -214,6 +212,20 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
               // setSenderMessages([banedMessage]);
               setRecieverMessages([banedMessage]);
               return
+            }else if (isMuted && channel !== "general"){
+              // set a default message to show that you are muted
+              let muteMessage = {
+                user: {
+                  username: "muted user",
+                  avatarUrl: "https://static.vecteezy.com/system/resources/previews/011/912/911/non_2x/banned-poster-red-sign-locked-warning-about-blocking-online-content-deleting-user-from-social-network-account-restricting-information-web-channel-banning-use-negative-materials-vector.jpg"
+                },
+                message: "",
+                channel: "muted",
+                sender: "you have been muted"
+              }
+              setSenderMessages([]);
+              setRecieverMessages([muteMessage]);
+              return
             } else if (serverChannel === staticChannelName){
               
               if (usernameFromServer !== usernameFromSession) {
@@ -224,7 +236,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
                 // clear the reciever messages
                 setRecieverMessages([]);
               } else {
-                if (!isBlockUser){
+                if (isBlockUser && isDirectMessage){
                   let emptyMessage = {
                     user: {
                       username: "no messages",
@@ -285,10 +297,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
   const checkIfTheUserIsBaned = () => {
     socket.emit("checkIfTheUserIsBaned", {sender: username, channelId: channelId});
     socket.on("checkIfTheUserIsBaned", (data) => {
-      console.log("channel in client", channel, "channel in server", data?.channel?.name
-      , "username in client", username, "username in server", data?.user?.username,
-      "isBaned", data?.isBanned
-      )
+      
       if (data && data?.user?.username === username
         && data?.channel?.name === channel
         && data?.isBanned === true){
@@ -296,6 +305,21 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
       }
       else{
         setYouAreBaned(false);
+      }
+    });
+  }
+
+  //----------- check if the user is muted ----------------
+  const checkIfTheUserIsMuted = () => {
+    socket.emit("checkIfTheUserIsMuted", {sender: username, channelId: channelId});
+    console.log("channelId", channelId)
+    socket.on("checkIfTheUserIsMuted", (data : any) => {
+      if (data?.isMuted)
+      {
+        setIsMuted(true);
+      }
+      else{
+        setIsMuted(false);
       }
     });
   }
@@ -312,7 +336,8 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     if (isDirectMessage) {
       handlelistDirectMessages();
     }else{
-      checkIfTheUserIsBaned();
+      // checkIfTheUserIsBaned();
+      checkIfTheUserIsMuted();
       handlelistChannelMessages();
     }
     return () => {

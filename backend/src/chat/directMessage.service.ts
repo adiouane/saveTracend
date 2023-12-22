@@ -24,10 +24,12 @@ export class directMessageService {
       },
     });
     if (!user) {
-      throw new Error('User not found');
+      console.log('User not found');
+      return;
     }
     if (!reciever) {
-      throw new Error('reciever not found');
+      console.log('reciever not found');
+      return;
     }
     const createDirectMessage = await this.prisma.directMessage.create({
       data: {

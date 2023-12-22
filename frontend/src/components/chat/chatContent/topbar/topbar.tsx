@@ -20,19 +20,21 @@ export default function TopBar({user, username, channel} : {user:any, username: 
 
         {/* picture profile  */}
         
-        <div className="ml-auto  lg:block" onClick={() => setIsComponentVisible(!isComponentVisible)}>
+        <div className="ml-auto  lg:block" >
+         
           <div className="relative">
             {/* megamenu profile */}
             <div className="absolute top-0 right-0  -mt-5 mr-2 flex items-center" >
-
+              
               {/* <!-- drawer component --> */}
               <button
                 onClick={() => setIsComponentVisible(!isComponentVisible)}
                 className="cursor-pointer my-2"
                 type="button"
               >
+                
                 <svg
-                  className="w-5 h-5 text-white  cursor-pointer   "
+                  className="w-5 h-5 text-white  cursor-pointer hover:text-gray-300  2xl:hidden"
                   aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="currentColor"
@@ -44,6 +46,14 @@ export default function TopBar({user, username, channel} : {user:any, username: 
 
               {isComponentVisible && (
                 <div className="sidemodelAM absolute h-screen -right-8 w-80 -top-1   bg-backgroundColorPrimery rounded-md shadow-lg border border-gray-700">
+                  <button
+                onClick={() => setIsComponentVisible(!isComponentVisible)}
+                className="cursor-pointer my-2 ml-60 rounded-full bg-gray-700 text-white text-sm px-4 py-2
+                "
+                type="button"
+              >
+                close 
+                </button>
                   <h3 className=" font-light text-white pl-10 py-10 opacity-50">
                     # Admins
                   </h3>

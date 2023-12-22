@@ -12,7 +12,9 @@ export default function AdminsMembers({ user }: { user: any }) {
   const [admins, setAdmins] = useState<any[]>([]);
   const [Setting, setSetting] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [time, setTime] = useState<string>("");
+  const [ShowTimeMuted, setShowTimeMuted] = useState<boolean>(false);
+  const [member, setMember] = useState<string>("");
+  const [sender, setSender] = useState<string>("");
 
 
   // list all members in the channel
@@ -44,7 +46,8 @@ export default function AdminsMembers({ user }: { user: any }) {
 
 
   const makeAdmin = (member: string, channelId: string) => {
-    const sender = user?.username;
+    setSender(user?.username);
+    setMember(member);
     socket.emit("makeAdmin", { sender, member, channelId });
     socket.on("makeAdmin", (data: any) => {
       setSetting(!Setting);
@@ -52,7 +55,8 @@ export default function AdminsMembers({ user }: { user: any }) {
   }
 
   const kickMember = (member: string, channelId: string) => {
-    const sender = user?.username;
+    setSender(user?.username);
+    setMember(member);
     socket.emit("kickMember", { sender, member, channelId });
     socket.on("kickMember", (data: any) => {
       setSetting(!Setting);
@@ -60,7 +64,8 @@ export default function AdminsMembers({ user }: { user: any }) {
   }
 
   const BanMember = (member: string, channelId: string) => {
-    const sender = user?.username;
+    setSender(user?.username);
+    setMember(member);
     socket.emit("BanMember", { sender, member, channelId });
     socket.on("BanMember", (data: any) => {
       setSetting(!Setting);
@@ -68,21 +73,32 @@ export default function AdminsMembers({ user }: { user: any }) {
   }
 
   const MuteMember = (member: string, channelId: string) => {
-    const sender = user?.username;
-    socket.emit("MuteMember", { sender, member, channelId, time });
-    setIsMuted(!isMuted);
+    setSender(user?.username);
+    setMember(member);
+
+    // Calculate the time when the mute will end
+    const muteDuration = 20 * 1000; // 20 seconds
+    // const unmuteTime = new Date().getTime() + muteDuration;
+
+    let Muted = false;
+    // Emit a socket event to the server to mute the member
+    socket.emit("MuteMember", { sender, member, channelId,  Muted});
+   
+    // wait for time to end
+    setTimeout(() => {
+      Muted = true;
+      socket.emit("MuteMember", { sender, member, channelId, Muted });
+    }, muteDuration);
+
+
+    setShowTimeMuted(!ShowTimeMuted);
+  };
+
+  const close = () => {
+    setSetting(!Setting);
+    setShowTimeMuted(!ShowTimeMuted);
   }
 
-
-  const Submit = () => {
-    if (time === "") {
-      alert("Please enter time");
-    } else {
-      setIsMuted(!isMuted);
-    }
-  }
-
-  //TODO: add mute and unmute
 
 
   return (
@@ -162,27 +178,21 @@ export default function AdminsMembers({ user }: { user: any }) {
                         onClick={() => MuteMember(member.username, channelId)}
                       >Mute User</button>
                       {
-                        isMuted && (
-                          <div className="flex flex-col justify-between items-center">
-                            <div>
-                              <input type="text" placeholder="Enter time" onChange={(e) => setTime(e.target.value)
-                              }
-                                className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-20 font-sans border  border-gray-700 hover:bg-gray-700" />
-                              <span className="text-white font-bold  opacity-90 ml-2 mr-2">Minutes</span>
+                        ShowTimeMuted && (
+                          <div className="flex flex-col items-center justify-center">
+                            <h6 className="text-white font-thin text-xl"
+                             >
+                              <span className="text-red-500">User <span className="text-blue-400"> {member.username} </span>
+                              is Muted <span className="text-blue-400"> for 1 minute</span>
+                              </span>
+
+                            </h6>
                             </div>
-                            <div>
-                              <button className="border rounded-3xl text-sm p-1 mb-3 border-gray-700 hover:bg-gray-700"
-                                onClick={() => Submit()
-                                }>
-                                Submit
-                              </button>
-                            </div>
-                          </div>
                         )
                       }
                       <button
                         className=" mr-70 border rounded-3xl text-sm p-1 max-w-20 border-gray-700 hover:bg-gray-700 "
-                        onClick={() => setSetting(!Setting)}>close</button>
+                        onClick={() => close()}>close</button>
                     </div>
                   )
                 }
