@@ -45,6 +45,7 @@ export class ChatGateway {
     },
     @ConnectedSocket() client: Socket,
   ) {
+  
     const saveMessage = await this.channelService.createChannelMessage(data);
     this.server.to(data.channel).emit('channelMessage', saveMessage);
     return saveMessage;
@@ -802,7 +803,155 @@ export class ChatGateway {
   }
 
 
-  // muteMember
+  // // muteMember for a specific time
+  @SubscribeMessage('MuteMember')
+  async MuteMember(
+    @MessageBody()
+    data: {
+      sender: string;
+      member: string;
+      channelId: string;
+      time: string;
+    },
+  ) {
+    if (!data.sender && !data.member && !data.channelId) {
+      console.log('Channel not found MuteMember data');
+      return;
+    }
+    console.log('data.', data);
+    // a owner can mute an admin or a member
+    // an admin can mute a member
+    // a member can not mute anyone 
+    // a admin can not mute an admin or owner
+
+    const muteUntil = new Date(); // Assuming you have a valid Date object
+    muteUntil.setMinutes(muteUntil.getMinutes() + data.time as any);
+
+    // Convert the Date object to ISO-8601 format
+    const isoFormattedTime = muteUntil.toISOString(); 
+
+    // first we will check if the sender has just the role member becuse he can not mute anyone
+    const member = await this.prisma.user.findUnique({
+      where: {
+        username: data.sender,
+      },
+    });
+
+    const checkMember = await this.prisma.channelMembership.findFirst({
+      where: {
+        channelId: data.channelId,
+        userId: member.id,
+        roleId: 'member',
+      },
+    });
+
+    if (checkMember) {
+      // so the sender is just a member
+      console.log('you are just a member you can not mute anyone');
+      return;
+    }
+
+    
+    // check if the sender is owner
+    const owner = await this.prisma.user.findUnique({
+      where: {
+        username: data.sender,
+      },
+    });
+
+    const checkOwner = await this.prisma.channel.findFirst({
+      where: {
+        id: data.channelId,
+        userId: owner.id,
+        role: 'owner',
+      },
+    });
+
+    if (!checkOwner) {
+      // so the sender is an admin
+      // this case the sender can mute a member but not an admin or owner
+      const member = await this.prisma.user.findUnique({
+        where: {
+          username: data.member,
+        },
+      });
+
+      const checkMember = await this.prisma.channelMembership.findFirst({
+        where: {
+          channelId: data.channelId,
+          userId: member.id,
+          roleId: 'member',
+        },
+      });
+
+      if (!checkMember) {
+        console.log('you can not mute an admin or owner');
+        return;
+      }
+
+      
+      const MutedMember = await this.prisma.channelMembership.update({
+        where: {
+          id: checkMember.id,
+        },
+        data: {
+          isMuted: true,
+          time: isoFormattedTime,
+        },
+      });
+
+      console.log('MutedMember', MutedMember);
+
+      this.server.emit('MuteMember', MutedMember);
+      return MutedMember;
+
+    }
+
+    // so the sender is an owner
+
+    // this case the sender can mute anyone
+
+    const member2 = await this.prisma.user.findUnique({
+      where: {
+        username: data.member,
+      },
+    });
+
+    const checkMember2 = await this.prisma.channelMembership.findFirst({
+      where: {
+        channelId: data.channelId,
+        userId: member2.id,
+        roleId: 'member',
+      },
+    });
+
+    if (!checkMember2){
+      console.log('member not found', checkMember2);
+      return;
+    }
+    console.log(checkMember2)
+    const muteMember2 = await this.prisma.channelMembership.update({
+      where: {
+        id: checkMember2.id,
+      },
+
+      data: {
+        isMuted: true,
+        time: isoFormattedTime,
+      },
+
+    });
+
+    console.log('muteMember2', muteMember2);
+
+    this.server.emit('MuteMember', muteMember2);
+
+    return muteMember2;
+
+  }
+
+
+
 
 
 

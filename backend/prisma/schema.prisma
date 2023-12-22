@@ -42,7 +42,6 @@ model Channel {
   updatedAt      DateTime         @updatedAt
   visibility     String @default("public")
   role           String @default("owner")
-  // connect        Boolean       @default(false)    
   password       String?
   ChannelMessage ChannelMessage[]
   userId         String
@@ -80,7 +79,7 @@ model ChannelMembership {
   isKicked       Boolean  @default(false)
   isBanned       Boolean  @default(false)
   isMuted        Boolean  @default(false)
-  kickExpiresAt  DateTime?
+  time           DateTime?
   channelId      String
   
   channel        Channel  @relation(fields: [channelId], references: [id])
