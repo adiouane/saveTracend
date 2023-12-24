@@ -175,34 +175,34 @@ export class channelService {
 
 
   // ------------------ list channels ------------------
-  async listChannels(data: { sender: string; }) {
-    if (!data.sender) {
-      console.log('sender not found');
-      return;
-    }
-    const user = await this.prisma.user.findUnique({
-      where: {
-        username: data.sender,
-      },
-    });
-    if (!user) {
-     console.log('User not found');
-      return;
-    }
-    const channels = await this.prisma.channel.findMany({
-      where: {
-        userId: user.id,
-      },
-      include: {
-        user: true,
-        // ChannelMembership: {
-        //   select: {
-        //     user: true,
-        //   },
-        // },
-      },
-    });
-    return channels;
-  }
+  // async listChannels(data: { sender: string; }) {
+  //   if (!data.sender) {
+  //     console.log('sender not found');
+  //     return;
+  //   }
+  //   const user = await this.prisma.user.findUnique({
+  //     where: {
+  //       username: data.sender,
+  //     },
+  //   });
+  //   if (!user) {
+  //    console.log('User not found');
+  //     return;
+  //   }
+  //   const channels = await this.prisma.channel.findMany({
+  //     where: {
+  //       userId: user.id,
+  //     },
+  //     include: {
+  //       user: true,
+  //       // ChannelMembership: {
+  //       //   select: {
+  //       //     user: true,
+  //       //   },
+  //       // },
+  //     },
+  //   });
+  //   return channels;
+  // }
   
 }

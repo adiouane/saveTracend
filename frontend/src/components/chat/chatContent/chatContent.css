@@ -8,9 +8,18 @@
    overflow-y: auto;
 }
 .list-div{
-   min-width: 20%;
+   min-width: 20% !important;
+   max-width: 30% !important;
+   /* // fix width for mobile */
 }
 
+@media   (max-width: 1838px) {
+   .list-div{
+      min-width: 30% !important;
+      max-width: 30% !important;
+   }
+
+}
 
 @media   (max-width: 3000px) {
    .sidemodelAM{

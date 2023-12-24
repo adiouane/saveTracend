@@ -33,6 +33,17 @@ export class ChatGateway {
     private readonly notificationService: notificationService,
   ) { }
 
+  // Join a specific channel room
+  @SubscribeMessage('joinChannel')
+  async joinChannel(
+    @MessageBody()
+    data: { channel: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    client.join(data.channel); // this is how you join a channel room
+    // .join() is a built-in method from Socket.IO that allows you to join a specific channel room
+  }
+
   // channalMessage
   @SubscribeMessage('channelMessage')
   async channelMessage(
@@ -51,16 +62,6 @@ export class ChatGateway {
     return saveMessage;
   }
 
-  // Join a specific channel room
-  @SubscribeMessage('joinChannel')
-  async joinChannel(
-    @MessageBody()
-    data: { channel: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    client.join(data.channel); // this is how you join a channel room
-    // .join() is a built-in method from Socket.IO that allows you to join a specific channel room
-  }
 
   // list messages for a channel
   @SubscribeMessage('listChannelMessages')
@@ -239,17 +240,17 @@ export class ChatGateway {
     }
   }
 
-  // get all  channels that user own
-  @SubscribeMessage('listChannels')
-  async listChannels(
-    @MessageBody() data: { sender: string; },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const channels = await this.channelService.listChannels(data);
-    // this.server.to(data.channel).emit('listChannels', channels);
-    this.server.emit('listChannels', channels);
-    return channels;
-  }
+  // // get all  channels that user own
+  // @SubscribeMessage('listChannels')
+  // async listChannels(
+  //   @MessageBody() data: { sender: string; },
+  //   @ConnectedSocket() client: Socket,
+  // ) {
+  //   const channels = await this.channelService.listChannels(data);
+  //   // this.server.to(data.channel).emit('listChannels', channels);
+  //   this.server.emit('listChannels', channels);
+  //   return channels;
+  // }
 
 
   //listAcceptedChannels
@@ -268,6 +269,12 @@ export class ChatGateway {
         },
       },
     });
+    if (!channels) {
+      console.log('Channel not found listAcceptedChannels data');
+      this.server.emit('listAcceptedChannels', channels);
+      return;
+    }
+    console.log('channels', channels);
     this.server.emit('listAcceptedChannels', channels);
     return channels;
   }
@@ -282,15 +289,37 @@ export class ChatGateway {
     const channels = await this.prisma.channel.findMany({
       where: {
         visibility: 'public',
-        user: {
-          username: {
-            not: data.sender, // i dont want to see my own channels in the list but i will return other users channels
-            // becuase my own channels will be in listChannels and if i list them here i will have duplicates
-          },
-        },
+      },
+      include: {
+        user: true,
       },
     });
     this.server.emit('listPublicChannels', channels);
+    return channels;
+  }
+
+  // listPrivateChannels
+  // list all private channels in database
+  @SubscribeMessage('listPrivateChannels')
+  async listPrivateChannels(
+    @MessageBody() data: { sender: string; },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        username: data.sender,
+      },
+    });
+    const channels = await this.prisma.channel.findMany({
+      where: {
+        visibility: 'private',
+        userId: user.id,
+      },
+      include: {
+        user: true,
+      },
+    });
+    this.server.emit('listPrivateChannels', channels);
     return channels;
   }
 
@@ -365,6 +394,9 @@ export class ChatGateway {
       where: {
         id: data.id,
       },
+      include: {
+        user: true,
+      },
     });
     this.server.emit('getChannelById', channel);
     return channel;
@@ -418,9 +450,12 @@ export class ChatGateway {
         id: data.channelId,
       },
     });
-    const channelAdmins = await this.prisma.channel.findMany({
+    const channelAdmins = await this.prisma.channelMembership.findMany({
       where: {
-        id: channel.id,
+        channel: {
+          id: channel.id,
+        },
+        isAdmin: true,
       },
       select: {
         user: true,
@@ -443,64 +478,135 @@ export class ChatGateway {
       console.log('Channel not found makeAdmin data');
       return;
     }
+
+    // CASE OF JUST MEMBER
     const channel = await this.prisma.channel.findUnique({
       where: {
         id: data.channelId,
       },
     });
-
-    // check if the user is admin
-    const user = await this.prisma.user.findUnique({
+    
+    // check if the user is owner
+    const owner = await this.prisma.user.findUnique({
       where: {
         username: data.sender,
       },
     });
 
-    const checkAdmin = await this.prisma.channelMembership.findFirst({
-      where: {
-        channelId: channel.id,
-        userId: user.id,
-        roleId: 'admin',
-        isAdmin: true,
-      },
-    });
-
-    if (!checkAdmin) {
-      console.log('you are not admin', checkAdmin);
+    if (!owner) {
+      console.log('owner not found: ', data.sender);
       return;
     }
 
-    const member = await this.prisma.user.findUnique({
+    // check if the user is owner
+    const checkOwner = await this.prisma.channel.findFirst({
       where: {
-        username: data.member,
+        id: channel.id,
+        userId: owner.id,
+        role: 'owner',
       },
     });
 
-    const checkMember = await this.prisma.channelMembership.findFirst({
-      where: {
-        channelId: channel.id,
-        userId: member.id,
-      },
-    });
+    if (!checkOwner) {
 
-    if (!checkMember) {
-      console.log('member not found', checkMember);
-      return;
+      // CASE OF ADMIN
+      // check if the user is admin
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.sender,
+        },
+      });
+
+      const checkAdmin = await this.prisma.channelMembership.findFirst({
+        where: {
+          channelId: channel.id,
+          userId: user.id,
+          roleId: 'admin',
+          isAdmin: true,
+        },
+      });
+
+      if (!checkAdmin) {
+        console.log(data.sender, ' is not admin', checkAdmin);
+        this.server.emit('makeAdmin', checkAdmin);
+        return;
+      }
+
+      const member = await this.prisma.user.findUnique({
+        where: {
+          username: data.member,
+        },
+      });
+
+      const checkMember = await this.prisma.channelMembership.findFirst({
+        where: {
+          channelId: channel.id,
+          userId: member.id,
+        },
+      });
+
+      if (!checkMember) {
+        console.log('member not found', checkMember);
+        return;
+      }
+
+      const makeAdmin = await this.prisma.channelMembership.update({
+        where: {
+          id: checkMember.id,
+        },
+        data: {
+          isAdmin: true,
+          roleId: 'admin',
+        },
+      });
+
+      this.server.emit('makeAdmin', makeAdmin);
+      return makeAdmin;
+      }
+      else{
+
+        // CASE OF OWNER
+      // first we will search for channel id
+      const channel = await this.prisma.channel.findUnique({
+        where: {
+          id: data.channelId,
+        },
+      });
+
+      // then we will search for the member id
+      const member = await this.prisma.user.findUnique({
+        where: {
+          username: data.member,
+        },
+      });
+
+      // then we will search for the member id in channelMembership
+      const checkMember = await this.prisma.channelMembership.findFirst({
+        where: {
+          channelId: channel.id,
+          userId: member.id,
+        },
+      });
+
+      // if the member is not found
+      if (!checkMember) {
+        console.log('member not found', checkMember);
+        return;
+      }
+
+      // if the member is found we will make him admin
+      const makeAdmin = await this.prisma.channelMembership.update({
+        where: {
+          id: checkMember.id,
+        },
+        data: {
+          isAdmin: true,
+          roleId: 'admin',
+        },
+      });
+      this.server.emit('makeAdmin', makeAdmin);
+
     }
-
-    const makeAdmin = await this.prisma.channelMembership.update({
-      where: {
-        id: checkMember.id,
-      },
-      data: {
-        isAdmin: true,
-        roleId: 'admin',
-      },
-    });
-
-    this.server.emit('makeAdmin', makeAdmin);
-    return makeAdmin;
- 
   }
 
   // kickMember
@@ -529,6 +635,11 @@ export class ChatGateway {
       },
     });
 
+    if (!member) {
+      console.log('member not found', data.sender);
+      throw new Error('member not found');
+    }
+
     const checkMember = await this.prisma.channelMembership.findFirst({
       where: {
         channelId: data.channelId,
@@ -540,6 +651,7 @@ export class ChatGateway {
     if (checkMember) {
       // so the sender is just a member
       console.log('you are just a member you can not kick anyone');
+      this.server.emit('kickMember', checkMember);
       return;
     }
 
@@ -577,7 +689,8 @@ export class ChatGateway {
       });
 
       if (!checkMember) {
-        console.log('you can not kick an admin or owner');
+        console.log('you can not kick an admin or owner', data.member);
+        this.server.emit('kickMember', checkMember);
         return;
       }
 
@@ -623,19 +736,23 @@ export class ChatGateway {
           channelId: data.channelId,
           userId: admin.id,
           roleId: 'admin',
+          isAdmin: true,
         },
       });
 
       if (!checkAdmin) {
-        console.log('you can not kick an owner');
+        console.log('you can not kick an owner', data.member);
+        this.server.emit('kickMember', checkAdmin); // return null and in front i catch it to render connot kick an owner
         return;
       }
 
-      const kickAdmin = await this.prisma.channelMembership.delete({
+      // delete from admisn table
+      const deleteAdmin = await this.prisma.channelMembership.delete({
         where: {
           id: checkAdmin.id,
         },
       });
+
 
       const removeAcceptedChannelInvite = await this.prisma.acceptedChannelInvite.deleteMany({
         where: {
@@ -644,10 +761,11 @@ export class ChatGateway {
         },
       });
 
-
-      this.server.emit('kickMember', kickAdmin);
+      this.server.emit('kickMember', deleteAdmin);
       return;
     }
+
+    // so owern will kick a member
 
     const kickMember2 = await this.prisma.channelMembership.delete({
       where: {
@@ -696,6 +814,11 @@ export class ChatGateway {
       },
     });
 
+    if (!member) {
+      console.log('member not found', data.sender);
+      return;
+    }
+
     const checkMember = await this.prisma.channelMembership.findFirst({
       where: {
         channelId: data.channelId,
@@ -707,6 +830,7 @@ export class ChatGateway {
     if (checkMember) {
       // so the sender is just a member
       console.log('you are just a member you can not ban anyone');
+      this.server.emit('BanMember', checkMember);
       return;
     }
 
@@ -745,6 +869,7 @@ export class ChatGateway {
 
       if (!checkMember) {
         console.log('you can not ban an admin or owner');
+        this.server.emit('BanMember', checkMember);
         return;
       }
 
@@ -757,7 +882,6 @@ export class ChatGateway {
         },
       });
 
-      console.log('banned admin a member: ', BanedMember);
 
       this.server.emit('BanMember', BanedMember);
       return BanedMember;
@@ -783,7 +907,11 @@ export class ChatGateway {
     });
 
     if (!checkMember2)
-      console.log('member not found', checkMember2);
+      {
+        console.log('member not found', checkMember2);
+        this.server.emit('BanMember', checkMember2);
+        return;
+      }
 
     const banMember2 = await this.prisma.channelMembership.update({
       where: {
@@ -793,7 +921,6 @@ export class ChatGateway {
         isBanned: true,
       },
     });
-    console.log('banMember2', banMember2);
 
 
     this.server.emit('BanMember', banMember2);
@@ -841,7 +968,8 @@ export class ChatGateway {
 
     if (checkMember) {
       // so the sender is just a member
-      console.log('you are just a member you can not mute anyone');
+      console.log('you are just a member');
+      this.server.emit('MuteMember', "you are just a member");
       return;
     }
 
@@ -885,7 +1013,6 @@ export class ChatGateway {
       }
 
       if (data.Muted) {
-        console.log("data.isMuted", data.Muted)
         const isMutedMember = await this.prisma.channelMembership.update({
           where: {
             id: checkMember.id,
@@ -897,7 +1024,7 @@ export class ChatGateway {
 
         console.log('isMutedMember', isMutedMember);
 
-        this.server.emit('MuteMember', isMutedMember);
+        this.server.emit('MuteMember', "admin muted member");
         return isMutedMember;
       }
       
@@ -967,14 +1094,11 @@ export class ChatGateway {
     });
 
 
-    this.server.emit('MuteMember', muteMember2);
+    this.server.emit('MuteMember', "owner muted member");
 
     return muteMember2;
 
   }
-
-
-
 
 
 
@@ -989,7 +1113,6 @@ export class ChatGateway {
     },
   ) {
     if (!data.sender && !data.channelId) {
-      console.log('Channel not found checkIfTheUserIsBaned data');
       return;
     }
     const user = await this.prisma.user.findUnique({
@@ -1030,7 +1153,6 @@ export class ChatGateway {
     },
   ) {
     if (!data.sender && !data.channelId) {
-      console.log('Channel not found checkIfTheUserIsMuted data');
       return;
     }
     const user = await this.prisma.user.findUnique({

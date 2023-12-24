@@ -15,10 +15,9 @@ export default function AdminsMembers({ user }: { user: any }) {
   const [ShowTimeMuted, setShowTimeMuted] = useState<boolean>(false);
   const [member, setMember] = useState<string>("");
   const [sender, setSender] = useState<string>("");
+  const [justMemebre, setJustMemebre] = useState<boolean>(false);
 
-
-  // list all members in the channel
-  useEffect(() => {
+  const listAdminsAndMembers = (channelId: string) => {
     setMembers([]);
     setAdmins([]);
     const username = user?.username;
@@ -27,16 +26,23 @@ export default function AdminsMembers({ user }: { user: any }) {
       data?.map((member: any) => {
         setMembers((members) => [...members, member?.user].filter((v, i, a) => a.findIndex(t => (t?.username === v?.username)) === i));
       });
-
     });
+
     // list all admins in the channel
     socket.emit("GetChannelAdmins", { channelId });
     socket.on("GetChannelAdmins", (data: any) => {
       for (let i = 0; i < data.length; i++) {
         setAdmins((admins) => [...admins, data[i]?.user].filter((v, i, a) => a.findIndex(t => (t?.username === v?.username)) === i));
       }
-
     });
+  };
+
+  // list all members in the channel
+  useEffect(() => {
+    if (channelId) {
+      listAdminsAndMembers(channelId);
+      console.log("all admins: ", admins);
+    }
     return () => {
       socket.off("ChannelMembers");
       socket.off("ChannelAdmins");
@@ -50,7 +56,15 @@ export default function AdminsMembers({ user }: { user: any }) {
     setMember(member);
     socket.emit("makeAdmin", { sender, member, channelId });
     socket.on("makeAdmin", (data: any) => {
+      
+      if (!data){
+        alert("you are not the owner or admin of the channel");
+        return;
+      }else{
+        alert("admin added");
+      }
       setSetting(!Setting);
+      listAdminsAndMembers(channelId);
     });
   }
 
@@ -59,6 +73,14 @@ export default function AdminsMembers({ user }: { user: any }) {
     setMember(member);
     socket.emit("kickMember", { sender, member, channelId });
     socket.on("kickMember", (data: any) => {
+      console.log("kick member: ", data);
+      if (!data){
+        alert("you are not the owner or admin of the channel");
+        return;
+      }
+      else{
+        alert("member kicked");
+      }
       setSetting(!Setting);
     });
   }
@@ -68,7 +90,15 @@ export default function AdminsMembers({ user }: { user: any }) {
     setMember(member);
     socket.emit("BanMember", { sender, member, channelId });
     socket.on("BanMember", (data: any) => {
+      console.log("ban member: ", data);
+      if (!data){
+        alert("you can't ban the member");
+        return;
+      }else{
+        alert("member banned");
+      }
       setSetting(!Setting);
+
     });
   }
 
@@ -83,6 +113,18 @@ export default function AdminsMembers({ user }: { user: any }) {
     let Muted = false;
     // Emit a socket event to the server to mute the member
     socket.emit("MuteMember", { sender, member, channelId,  Muted});
+    socket.on("MuteMember", (data: any) => {
+      console.log("1: ", data)
+      if (data === "owner muted member") {
+        setShowTimeMuted(!ShowTimeMuted);
+      }
+      else if (data === "admin muted member") {
+        setShowTimeMuted(!ShowTimeMuted);
+      }
+      else{
+        setJustMemebre(!justMemebre);
+      }
+    });
    
     // wait for time to end
     setTimeout(() => {
@@ -90,13 +132,12 @@ export default function AdminsMembers({ user }: { user: any }) {
       socket.emit("MuteMember", { sender, member, channelId, Muted });
     }, muteDuration);
 
-
-    setShowTimeMuted(!ShowTimeMuted);
   };
 
   const close = () => {
     setSetting(!Setting);
     setShowTimeMuted(!ShowTimeMuted);
+    setJustMemebre(false);
   }
 
 
@@ -178,12 +219,24 @@ export default function AdminsMembers({ user }: { user: any }) {
                         onClick={() => MuteMember(member.username, channelId)}
                       >Mute User</button>
                       {
-                        ShowTimeMuted && (
+                        ShowTimeMuted && !justMemebre && (
                           <div className="flex flex-col items-center justify-center">
                             <h6 className="text-white font-thin text-xl"
                              >
                               <span className="text-red-500">User <span className="text-blue-400"> {member.username} </span>
                               is Muted <span className="text-blue-400"> for 1 minute</span>
+                              </span>
+
+                            </h6>
+                            </div>
+                        )
+                      }
+                      {
+                        justMemebre && !ShowTimeMuted && (
+                          <div className="flex flex-col items-center justify-center">
+                            <h6 className="text-white font-thin text-xl"
+                             >
+                              <span className="text-red-500">You Can't Mute <span className="text-blue-400"> {member.username} </span>
                               </span>
 
                             </h6>

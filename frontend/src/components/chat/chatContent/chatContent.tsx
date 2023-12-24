@@ -75,7 +75,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     // Send the message input to the serv   
     if (messageInput === "") return;
     
-    if (!isDirectMessage && !isMuted && !isBlockUser && !youAreBaned) {
+    if (!isDirectMessage) {
       socket.emit("channelMessage", {
         sender: username,
         channel: channel,
@@ -83,7 +83,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
         message: messageInput,
       });
       socket.on("channelMessage", (data :any) => {
-        if (data && !isProtected) {
+        if (data || !isProtected) {
           handlelistChannelMessages();
         }
       });
@@ -251,20 +251,17 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
           
                   return;
                 }else{
-                setRecieverMessages(data.msg);
-                setAvaterReciever(data.msg[0]?.user.avatarUrl);
-                setNameUser(user?.username);
-                // clear the sender messages
-                setSenderMessages([]);
+                  setRecieverMessages(data.msg);
+                  setAvaterReciever(data.msg[0]?.user.avatarUrl);
+                  setNameUser(user?.username);
+                  // clear the sender messages
+                  setSenderMessages([]);
                 }
               }
           }
         
     }
     });
-    return () => {
-      socket.off("listChannelMessages");
-    };
   };
 
  
@@ -336,7 +333,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     if (isDirectMessage) {
       handlelistDirectMessages();
     }else{
-      // checkIfTheUserIsBaned();
+      checkIfTheUserIsBaned();
       checkIfTheUserIsMuted();
       handlelistChannelMessages();
     }
@@ -484,7 +481,8 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
       {/* <!-- Chat input --> */}
       {  !isProtected && 
         <div className="pb-6 px-4 flex-none">
-        <div className="flex rounded-3xl  overflow-hidden ml-20 mr-20">
+        <div className="flex rounded-3xl  overflow-hidden 
+        ">
             <input
             type="text"
             spellCheck="false"
