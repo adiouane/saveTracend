@@ -63,9 +63,10 @@ export class channelService {
           },
         });
 
-        if (isexist){
-          console.log('Channel found1');
-        }
+        // if (isexist){
+        //   console.log('Channel found1');
+        //   return;
+        // }
     
         if (!isexist) {
           throw new Error('Channel not found createChannelMessage');
@@ -149,9 +150,11 @@ export class channelService {
           console.log('Channel not found in listChannelMessages');
           return;
         }
-        if (channelId){
-          console.log('Channel found');
-        }
+        // if (channelId){
+        //   console.log('Channel found');
+        
+        //   return;
+        // }
 
         // list all messages for a channel
         const messages = await this.prisma.channel.findMany({

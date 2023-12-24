@@ -284,9 +284,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     else
     {
       setArrayMessages([]);
-      return () => {
-        socket.off("listDirectMessages");
-      }
+      return;
     }
   };
 
@@ -343,7 +341,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     }
   } , [
     isDirectMessage,
-    channel,
+    // channel,
     channelId,
     username,
     reciever,

@@ -274,7 +274,6 @@ export class ChatGateway {
       this.server.emit('listAcceptedChannels', channels);
       return;
     }
-    console.log('channels', channels);
     this.server.emit('listAcceptedChannels', channels);
     return channels;
   }
@@ -1022,8 +1021,6 @@ export class ChatGateway {
           },
         });
 
-        console.log('isMutedMember', isMutedMember);
-
         this.server.emit('MuteMember', "admin muted member");
         return isMutedMember;
       }
@@ -1037,7 +1034,6 @@ export class ChatGateway {
         },
       });
 
-      console.log('MutedMember', MutedMember);
 
       this.server.emit('MuteMember', MutedMember);
       return MutedMember;
@@ -1068,7 +1064,6 @@ export class ChatGateway {
     }
 
     if (data.Muted) {
-      console.log("data.isMuted", data.Muted)
       const isMutedMember2 = await this.prisma.channelMembership.update({
         where: {
           id: checkMember2.id,
@@ -1137,10 +1132,8 @@ export class ChatGateway {
     if (checkIfTheUserIsBaned) {
       isBanned = true;
     }
-    console.log('isBanned', isBanned);
     this.server.emit('checkIfTheUserIsBaned', checkIfTheUserIsBaned);
-
-
+    return checkIfTheUserIsBaned;
   }
 
   // checkIfTheUserIsMuted  
@@ -1177,7 +1170,6 @@ export class ChatGateway {
     if (checkIfTheUserIsMuted) {
       isMuted = true;
     }
-    console.log('isMuted', isMuted);
     this.server.emit('checkIfTheUserIsMuted', checkIfTheUserIsMuted);
   }
 
@@ -1577,7 +1569,6 @@ export class ChatGateway {
         },
       });
             
-      console.log('blocked', blocked);
       this.server.emit('blockUser', blocked); // this will return all users
       return blocked;
     } catch (error) {
@@ -1596,6 +1587,9 @@ export class ChatGateway {
     },
   ) {
     try {
+      if (!data.username) {
+        return;
+      }
       const user = await this.prisma.user.findUnique({
         where: {
           username: data.username,

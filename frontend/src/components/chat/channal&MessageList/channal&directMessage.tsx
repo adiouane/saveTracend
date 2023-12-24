@@ -120,7 +120,6 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
       sender: username,
     });
     socket.on("listPublicChannels", (data: any) => {
-      console.log("listPublicChannels: ", data[0]?.user?.username);
       // if (data[0]?.user?.username !== username) return;
       setPublicChannels(data.filter((channel: any) => channel.name !== "general"));
     });
@@ -147,7 +146,6 @@ export default function ChannalAndDirectMessage({ user, switchChannelName, setCh
       sender: username,
     });
     socket.on("listPrivateChannels", (data: any) => {
-      console.log("listPrivateChannels: ", data[0]?.user?.username, "user client ", username);
       if (data[0]?.user?.username !== username) return;
       setPrivateChannels(data.filter((channel: any) => channel.name !== "general"));
     });
