@@ -11,20 +11,19 @@ const Notification = ({ user }: { user: any }) => {
   const [userWhoWillaAcceptInvite, setUserWhoWillaAcceptInvite] = useState("");
   const [idOfChannel, setIdOfChannel] = useState("");
 
-  useEffect(() => {
-    socket.on("notification", (data) => {      
-      // save data to state as array
-        setSender((sender) => [...sender, data]);
-        // save username to state
-        setSenderUsername(data.username);
-        
-    });
 
-    return () => {
-      // Clean up socket event listener when component unmounts
-      socket.off("notification");
-    };
-  }, []);
+  const getAllNotification = () => {
+    
+    socket.emit("notification", {username: user.username});
+    socket.on("notification", (data) => {
+      setSender([]);
+      setSenderUsername("");
+
+      setSender((sender) => [...sender, data[0]?.senderRequests]); // save all sender requests to state
+      setSenderUsername(data[0]?.receiverRequests?.username); // save current user username
+      setNotificationForFriend(!notificationForFriend);
+    });
+  };
 
   useEffect(() => {
     socket.on("sendInviteToChannel", (data : any) => {
@@ -45,7 +44,7 @@ const Notification = ({ user }: { user: any }) => {
       sender: senderUsername,
       receiver: user.username,
     });
-    // display none notification
+
     setNotificationForFriend(!notificationForFriend);
     // remove notification from state
     setSender([]);
@@ -56,6 +55,7 @@ const Notification = ({ user }: { user: any }) => {
     setChannelname("");
     setUserWhoSendInvite("");
     setUserWhoWillaAcceptInvite("");
+    setNotificationForFriend(!notificationForFriend);
   }
 
   const saveNewChannelToDB = async (channelName: string) => {
@@ -77,8 +77,10 @@ const Notification = ({ user }: { user: any }) => {
     emtyBoxOfNotification();
     setNotificationForFriend(!notificationForFriend);
 
+    
   }
-
+  
+ 
   return (
     <>
       <div className="relative m-6 inline-flex w-fit">
@@ -89,7 +91,7 @@ const Notification = ({ user }: { user: any }) => {
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 16 21"
-            onClick={() => setNotificationForFriend(!notificationForFriend)}
+            onClick={() => getAllNotification()}
           >
             <path
               stroke="currentColor"
@@ -109,11 +111,11 @@ const Notification = ({ user }: { user: any }) => {
                       <div className="flex items-center">
                           <img
                           className="object-cover w-8 h-8 rounded-full"
-                          src={sender.avatarUrl}
+                          src={sender?.avatarUrl}
                           alt="avatar"
                           />
                           <p className="mx-2 text-sm text-gray-800 dark:text-gray-200">
-                          {sender.username}
+                          {sender?.username}
                           </p>
                       </div>
                         <div className="flex items-center">

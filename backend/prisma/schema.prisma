@@ -26,7 +26,8 @@ model User {
   receiverInvitesChannel ChannelInvite[]  @relation("receiverInvitesChannel")
   sentDirectMessages     DirectMessage[]  @relation("sender")
   receivedDirectMessages DirectMessage[]  @relation("receiver")
-  friends                Friends[]        @relation("friends")
+  friends                Friends[]        @relation("myfriends")
+  friendsOf              Friends[]        @relation("MefriendsOf")
   senderRequests         FriendRequest[]  @relation("senderRequests")
   receiverRequests       FriendRequest[]  @relation("receiverRequests")
   notifications          Notification[]
@@ -134,9 +135,11 @@ model Friends {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   status     String // "online", "offline", "in_game"
-  friendId   String
   isBlocked  Boolean  @default(false)
-  friend     User     @relation("friends", fields: [friendId], references: [id])
+  MyfriendId   String
+  friend     User     @relation("myfriends", fields: [MyfriendId], references: [id])
+  MefriendsOfId     String
+  MefriendOf       User     @relation("MefriendsOf", fields: [MefriendsOfId], references: [id])
 }
 
 model BlockedUsers {

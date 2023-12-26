@@ -41,7 +41,6 @@ export default function AdminsMembers({ user }: { user: any }) {
   useEffect(() => {
     if (channelId) {
       listAdminsAndMembers(channelId);
-      console.log("all admins: ", admins);
     }
     return () => {
       socket.off("ChannelMembers");

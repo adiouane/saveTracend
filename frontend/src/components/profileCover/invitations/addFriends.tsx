@@ -88,19 +88,9 @@ export default function AddFriends() {
             Add Friend
           </button>
         ) : (
-          <button
-            className="max-w-xs p-2 px-4 text-xs cursor-pointer text-white font-bold bg-gray-500 border rounded-full shadow-lg"
-            onClick={() => {
-              sendFriendRequest();
-            }}
-            // disabled
-          >
-            Pending
-          </button>
+         null
         )
-      ) : (
-        null
-      )}
+      ) : null}
     </>
   );
 }

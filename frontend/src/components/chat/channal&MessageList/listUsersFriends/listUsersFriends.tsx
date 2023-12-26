@@ -1,12 +1,14 @@
 import socket from "@/services/socket";
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState, use } from "react";
 import { useIsDirectMessage } from "@/store/userStore";
 import useRecieverStore from "@/store/recieverStore";
 import useMessageStore from "@/store/messagesStore";
+import { tree } from "next/dist/build/templates/app-page";
+import { arrayBuffer } from "stream/consumers";
 
 export default function ListUsersFriends({ username }: { username: any }) {
   // request to get all users
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
   const { reciever, setReciever } = useRecieverStore();
   const [friendsId, setFriendsId] = useState([]);
@@ -14,6 +16,9 @@ export default function ListUsersFriends({ username }: { username: any }) {
   const [showBlock, setShowBlock] = useState(false);
   const [noFriends, setNoFriends] = useState(false);
   const [color, setColor] = useState("bg-green-400");
+  let arrayOfFriends: any[] = [];
+  const usersRef = useRef<any[]>([]);
+
 
 
   // fetch username from session storage
@@ -37,84 +42,39 @@ export default function ListUsersFriends({ username }: { username: any }) {
     }
   };
 
-  // Define a function to copy users to friendsArray
-
-  // Define a function to compare friendsId with all users id
-  const comparingFriends = () => {
-    socket.emit("getAllUsersFriends", { sender: UserName });
-    socket.on("getAllUsersFriends", (data) => {
-      if (data.length <= 0) {
-        console.log("no friends1");
-        setNoFriends(true);
-        setUsers([]);
-        return;
-      }
-      else {
-        // copy friends id to friendsArray
-        let friendsArray = [...data.map((user: any) => user.receiverId)];
-        setFriendsId(friendsArray as any);
-      }
-    }
-    );
-  };
-
-  // Define a function to get real friends by id
-  const getRealFriendsById = () => {
-    if (friendsId.length > 0) {
-      friendsId.map((friendId: any) => {
-        socket.emit("getUserById", { id: friendId });
-        socket.on("getUserById", (data) => {
-          let newArray = [];
-          newArray = [...users, data];
-          if (newArray.length > 0) {
-            newArray = newArray.filter((user: any) => user.username !== username);  // remove yourself from the list
-            // avoid duplicate users
-            newArray = newArray.filter((user: any, index: any, self: any) =>
-              index === self.findIndex((t: any) => (
-                t.username === user.username
-              ))
-            );
-          }
-          console.log("newArray", newArray);
-          setUsers(newArray as any);
-        });
-      });
-    }
-    else {
-      console.log("no friends");
-      setNoFriends(true);
-      setUsers([]);
-      return;
-    }
-  }
-
-
-
-  const getAllUsers = () => {
-    socket.emit("getAllUsers");
-    socket.on("getAllUsers", (data) => {
-      // Filter out duplicate users based on username
-      const uniqueUsers = data.filter((user: any) => user.username !== username);
-      let newArray = [];
-      newArray = uniqueUsers.filter((user: any) => user.username !== username);
-      setUsers(newArray);
-    });
-
-    return () => {
-      // Clean up any event listeners or subscriptions
-      socket.off("getAllUsers");
-    };
-  };
-
-
-  // Use useEffect with users as a dependency to trigger the copy operation
   useEffect(() => {
     fetchUserName();
-    getAllUsers();
-    comparingFriends();
-    if (UserName !== "") {
-      getRealFriendsById();
+  }, []);
+
+  const getFriends = () => {
+    socket.emit("getAllUsersFriends", { sender: username });
+
+    socket.on("getAllUsersFriends", (data) => {
+      if (data.length === 0) {
+        setNoFriends(true);
+      } else {
+        setNoFriends(false);
+      }
+      if (data[0]?.MefriendOf?.username === UserName) {
+        let arr = [];
+        for (let i = 0; i < data.length; i++) {
+          arr.push(data[0].friend);
+          console.log("arr", data[0].friend);
+        }
+        setUsers(arr);
+      console.log("data", data[0]?.friend.username);
+      console.log("users", data[0]?.MefriendOf?.username);
     }
+    });
+  };
+  
+  
+  // Use useEffect with users as a dependency to trigger the copy operation
+  useEffect(() => {
+    getFriends();
+    return () => {
+      socket.off("getAllUsersFriends");
+    };
   }, [UserName]);
 
 
@@ -124,50 +84,43 @@ export default function ListUsersFriends({ username }: { username: any }) {
     setReciever(username);
     setIsDirectMessage(true);
   };
-
-  let usersArray = [...users];
-  if (usersArray.length > 0) {
-    usersArray = usersArray.filter((user: any) => user.username !== username);  // remove yourself from the list
-  }
-
+  
+  
   const blockUser = (username: string) => {
     // UserName is the username of the user who blocked which is saved in session storage // todo ana
-    console.log(UserName, " has blocked", username);
     socket.emit("blockUser", {willbocked: username, whoblocked: UserName});
     setShowBlock(!showBlock)
   };
+  
 
-  const muteUser = (username: string) => {
-    console.log("username has mute", username);
-  };
 
   return (
     <>
-      {noFriends && usersArray.map((user: any, index) => (
+      {users && (Array.isArray(users) ? users : Object.keys(users)).map((user: any, index) => (
         <div
           className="flex items-center justify-between py-2  hover:bg-slate-700 rounded-2xl"
           key={index}
         >
           <div
             className="flex flex-col items-center  w-16 h-16"
-            onClick={() => saveReceiverName(user.username)}
+            onClick={() => saveReceiverName(user?.username)}
           >
             <div
               className="flex items-center justify-between space-x-2  cursor-pointer rounded-xl"
               key={index}
             >
               <img
-                className="w-14 h-14 rounded-full object-cover ml-32"
-                src={user.avatarUrl}
+                className="w-14 h-14 rounded-full object-cover ml-20"
+                src={user?.avatarUrl}
                 alt="avatar"
               />
               <div className="flex">
                 <div className="flex flex-col">
-                <span className="font-semibold text-md">{user.username}</span>
-                {user.status === "online" ? (
-                  <span className="text-sm text-green-400 font-bold">{user.status}</span>
+                <span className="font-semibold text-md">{user?.username}</span>
+                {user?.status === "online" ? (
+                  <span className="text-sm text-green-400 font-bold">{user?.status}</span>
                 ) : (
-                  <span className="text-sm text-gray-400">{user.status}</span>
+                  <span className="text-sm text-gray-400">{user?.status}</span>
                 )}
                 </div>
               </div>

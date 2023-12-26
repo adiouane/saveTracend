@@ -1508,12 +1508,26 @@ export class ChatGateway {
       sender: string;
     },
   ) {
+    // FIXME: HNA KHASNI NSIFT CLIENT ONTCHIKI ILA KAN MKHTALF 3LA SENDER RJA3 F FRONT
+
     try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.sender,
+        },
+      });
+
+      if (!user) {
+        console.log('user not found', data.sender);
+        return;
+      }
       const friends = await this.prisma.friends.findMany({
         where: {
-          friend: {
-            username: data.sender,
-          },
+          MefriendsOfId: user.id,
+        },
+        include: {
+          MefriendOf: true,
+          friend: true,
         },
       });
 

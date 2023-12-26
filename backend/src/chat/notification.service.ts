@@ -50,26 +50,30 @@ export class notificationService {
 
 
     // ------------------ list notification ------------------
-    async listFriendRequest(data: { username : string }) {
+    async listFriendRequest(data: { username : string}) {
+
+        // we list just the pending friend request
         try{
             const user = await this.prisma.user.findUnique({
                 where: {
                     username: data.username,
                 },
-                include: {
-                    senderRequests: {
-                        include: {
-                            senderRequests: true,
-                        },
-                    },
-                    receiverRequests: {
-                        include: {
-                            receiverRequests: true,
-                        },
-                    },
-                },
             });
-            return user;
+            
+            const friendRequests = await this.prisma.friendRequest.findMany({
+                where: {
+                    receiverId: user.id,
+                    status: "pending",
+                },
+                include: {
+                    senderRequests: true,
+                    receiverRequests: true,
+                },
+                
+            });
+            console.log("friendRequests",friendRequests, data.username)
+            return friendRequests;
+            
         }
         catch(err){
             throw err;
@@ -87,7 +91,6 @@ export class notificationService {
                     username: data.sender,
                 },
             });
-            // console.log("senderUser",senderUser)
 
             const reciverUser = await this.prisma.user.findUnique({
                 where: {
@@ -95,36 +98,50 @@ export class notificationService {
                 },
             });
 
-            // // check if the receiver is already a friend to the sender
-            const isFriend = await this.prisma.friends.findFirst({
+            // check if the user is already a friend to each other
+            const friendRequest = await this.prisma.friendRequest.findFirst({
                 where: {
-                    id: senderUser.id,
-                    friendId: reciverUser.id,
+                    senderId: senderUser.id,
+                    receiverId: reciverUser.id,
                 },
             });
 
-            const friend = await this.prisma.friends.create({
+            if (!friendRequest) {
+                return;
+            }
+
+            // update status
+            const updateStatus = await this.prisma.friendRequest.update({
+                where: {
+                    id: friendRequest.id,
+                },
                 data: {
-                    friend: {
-                        connect: {
-                            id: senderUser.id,
-                        },
-                    },
                     status: "accepted",
                 },
             });
 
-            const addFriendToRecieverTo = await this.prisma.friends.create({
+            // create friendship for the user
+            const friendship = await this.prisma.friends.create({
                 data: {
-                    friend: {
-                        connect: {
-                            id: reciverUser.id,
-                        },
-                    },
+                    MefriendsOfId: reciverUser.id,
+                    MyfriendId: senderUser.id,
                     status: "accepted",
                 },
             });
-            return friend;
+
+            // create friendship for the user
+            const friendship2 = await this.prisma.friends.create({
+                data: {
+                    MefriendsOfId: senderUser.id,
+                    MyfriendId: reciverUser.id,
+                    status: "accepted",   
+                },
+            });
+
+            return friendship2;
+
+
+          
         }
         catch(err){
             throw err;
