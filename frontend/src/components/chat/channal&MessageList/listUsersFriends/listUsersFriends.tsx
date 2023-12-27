@@ -16,10 +16,6 @@ export default function ListUsersFriends({ username }: { username: any }) {
   const [showBlock, setShowBlock] = useState(false);
   const [noFriends, setNoFriends] = useState(false);
   const [color, setColor] = useState("bg-green-400");
-  let arrayOfFriends: any[] = [];
-  const usersRef = useRef<any[]>([]);
-
-
 
   // fetch username from session storage
   const fetchUserName = async () => {
@@ -55,20 +51,17 @@ export default function ListUsersFriends({ username }: { username: any }) {
       } else {
         setNoFriends(false);
       }
-      if (data[0]?.MefriendOf?.username === UserName) {
-        let arr = [];
-        for (let i = 0; i < data.length; i++) {
-          arr.push(data[0].friend);
-          console.log("arr", data[0].friend);
+
+      const arr = [];
+      for (let items of data) {
+        if (items.MefriendOf?.username === UserName) {
+          arr.push(items.friend);
+          setUsers(arr);
         }
-        setUsers(arr);
-      console.log("data", data[0]?.friend.username);
-      console.log("users", data[0]?.MefriendOf?.username);
-    }
+      }
     });
   };
-  
-  
+
   // Use useEffect with users as a dependency to trigger the copy operation
   useEffect(() => {
     getFriends();
@@ -77,87 +70,88 @@ export default function ListUsersFriends({ username }: { username: any }) {
     };
   }, [UserName]);
 
-
-
   // save the reciever name
   const saveReceiverName = (username: string) => {
     setReciever(username);
     setIsDirectMessage(true);
   };
-  
-  
+
   const blockUser = (username: string) => {
     // UserName is the username of the user who blocked which is saved in session storage // todo ana
-    socket.emit("blockUser", {willbocked: username, whoblocked: UserName});
-    setShowBlock(!showBlock)
+    socket.emit("blockUser", { willbocked: username, whoblocked: UserName });
+    setShowBlock(!showBlock);
   };
-  
-
 
   return (
     <>
-      {users && (Array.isArray(users) ? users : Object.keys(users)).map((user: any, index) => (
-        <div
-          className="flex items-center justify-between py-2  hover:bg-slate-700 rounded-2xl"
-          key={index}
-        >
-          <div
-            className="flex flex-col items-center  w-16 h-16"
-            onClick={() => saveReceiverName(user?.username)}
-          >
+      {users &&
+        (Array.isArray(users) ? users : Object.keys(users)).map(
+          (user: any, index) => (
             <div
-              className="flex items-center justify-between space-x-2  cursor-pointer rounded-xl"
+              className="flex items-center justify-between py-2  hover:bg-slate-700 rounded-2xl"
               key={index}
             >
-              <img
-                className="w-14 h-14 rounded-full object-cover ml-20"
-                src={user?.avatarUrl}
-                alt="avatar"
-              />
-              <div className="flex">
-                <div className="flex flex-col">
-                <span className="font-semibold text-md">{user?.username}</span>
-                {user?.status === "online" ? (
-                  <span className="text-sm text-green-400 font-bold">{user?.status}</span>
-                ) : (
-                  <span className="text-sm text-gray-400">{user?.status}</span>
-                )}
+              <div
+                className="flex flex-col items-center  w-16 h-16"
+                onClick={() => saveReceiverName(user?.username)}
+              >
+                <div
+                  className="flex items-center justify-between space-x-2  cursor-pointer rounded-xl"
+                  key={index}
+                >
+                  <img
+                    className="w-14 h-14 rounded-full object-cover ml-20"
+                    src={user?.avatarUrl}
+                    alt="avatar"
+                  />
+                  <div className="flex">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-md">
+                        {user?.username}
+                      </span>
+                      {user?.status === "online" ? (
+                        <span className="text-sm text-green-400 font-bold">
+                          {user?.status}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">
+                          {user?.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {showBlock && (
+                    // add menu card to allow user to block or mute
+                    <>
+                      <div className="absolute top-[270px] left-[60px] w-56 rounded-md shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5">
+                        <a
+                          href="#"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          view profile
+                        </a>
+                        <a
+                          href="#"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => blockUser(user.username)}
+                        >
+                          Block
+                        </a>
+                        <a
+                          href="#"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowBlock(!showBlock)}
+                        >
+                          cancel
+                        </a>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-         
-              {
-                showBlock && (
-                  // add menu card to allow user to block or mute
-                  <>
-                    <div className="absolute top-[270px] left-[60px] w-56 rounded-md shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5">
-                    <a
-                        href="#"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        view profile
-                      </a>
-                      <a
-                        href="#"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => blockUser(user.username)}
-                      >
-                        Block
-                      </a>
-                      <a
-                        href="#"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setShowBlock(!showBlock)}
-                      >
-                        cancel
-                      </a>
-                    </div>
-                  </>
-                )
-              }
-             
-            </div>
-          </div>
-            <span className="cursor-pointer pr-5"
+              <span
+                className="cursor-pointer pr-5"
                 onClick={() => setShowBlock(!showBlock)}
               >
                 <svg
@@ -180,9 +174,10 @@ export default function ListUsersFriends({ username }: { username: any }) {
                     fill="#FFFEFE"
                   />
                 </svg>
-                </span>
-        </div>
-      ))}
+              </span>
+            </div>
+          )
+        )}
     </>
   );
 }

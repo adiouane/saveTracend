@@ -3,7 +3,7 @@ import "./chatContent.css";
 
 import TopBar from "./topbar/topbar";
 
-import { useEffect } from "react";
+import { use, useEffect } from "react";
 import { useState } from "react";
 import socket from "@services/socket";
 import { useIsDirectMessage } from "@/store/userStore";
@@ -276,7 +276,17 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
         reciever: reciever,
       });
       socket.on("listDirectMessages", (data) => {
-        if (Array.isArray(data.msg)) { // Array.isArray to handdle an error ecured in browser console
+        console.log("username: ", username)
+        console.log("reciever: ", reciever)
+        console.log("data.msg[0]?.receiver.username", data.msg[0]?.receiver.username)
+        console.log("data.msg[0]?.sender.username", data.msg[0]?.sender.username)
+        if (Array.isArray(data.msg)
+        && username === data.msg[0]?.receiver.username ||
+        username === data.msg[0]?.sender.username 
+        // i did this becuase data that comes from the server it may has name of the sender or the reciever
+        // and i check if the username is the sender or the reciever to set the messages
+        // to avoid deplucation of messages to other users
+        ) { // Array.isArray to handdle an error ecured in browser console
           setArrayMessages(data.msg);
         }
       });
@@ -337,7 +347,16 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     }
     return () => {
       socket.off("listDirectMessages");
-      socket.off("listChannelMessages");;
+      socket.off("listChannelMessages");
+      socket.off("onlineStatus");
+      socket.off("checkIfTheUserIsBaned");
+      socket.off("checkIfTheUserIsMuted");
+      socket.off("checkPassword");
+      socket.off("getUserById");
+      socket.off("getblockUser");
+      setArrayMessages([]);
+      setSenderMessages([]);
+      setRecieverMessages([]);
     }
   } , [
     isDirectMessage,

@@ -1321,12 +1321,6 @@ export class ChatGateway {
     try {
       // save the messages in an array where ChannelMessage is an object with the message and user
       const messages = await this.directMessageService.listDirectMessages(data);
-
-      const user = await this.prisma.user.findUnique({
-        where: {
-          username: data.sender,
-        },
-      });
       
       if (messages && messages.length > 0) {
         let msg = [];
