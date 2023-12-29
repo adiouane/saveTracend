@@ -264,7 +264,7 @@ export class notificationService {
                 },
             });
 
-            // create membership for the user as a member
+            // // create membership for the user as a member
             const membership = await this.prisma.channelMembership.create({
                 data: {
                     userId: reciverUser.id,

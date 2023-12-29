@@ -43,7 +43,7 @@ export default function Chat() {
             <ChatContent user={user} channel={channel} channelId={channelId}/>
         {!isDirectMessage ? (
           <>
-            <AdminsMembers user={user} />
+            <AdminsMembers user={user} channel={channel} />
           </>
         ) : (
           <div></div>

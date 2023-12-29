@@ -3,9 +3,10 @@ import { useIsDirectMessage } from "@/store/userStore";
 import { use, useEffect, useState } from "react";
 import socket from "@/services/socket";
 import { useChannleIdStore } from "@/store/channelStore";
+import { channel } from "diagnostics_channel";
 
 
-export default function AdminsMembers({ user }: { user: any }) {
+export default function AdminsMembers({ user, channel }: { user: any,  channel: string }) {
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
   const { channelId, setChannelId } = useChannleIdStore(); // channel id
   const [members, setMembers] = useState<any[]>([]);
@@ -31,6 +32,7 @@ export default function AdminsMembers({ user }: { user: any }) {
     // list all admins in the channel
     socket.emit("GetChannelAdmins", { channelId });
     socket.on("GetChannelAdmins", (data: any) => {
+      console.log("admins: ", data);
       for (let i = 0; i < data.length; i++) {
         setAdmins((admins) => [...admins, data[i]?.user].filter((v, i, a) => a.findIndex(t => (t?.username === v?.username)) === i));
       }
@@ -142,6 +144,9 @@ export default function AdminsMembers({ user }: { user: any }) {
 
 
   return (
+    <>
+    {
+      channel === "general" ? <div></div> :
     <div className="bg-slate-900  pr-40 mr-44 w-72 rounded-2xl hidden lg:block admin-div border border-gray-700">
       {!isDirectMessage ? (
         <>
@@ -256,5 +261,7 @@ export default function AdminsMembers({ user }: { user: any }) {
         <hr />
       )}
     </div>
+  }
+    </>
   );
 }

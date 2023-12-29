@@ -3,14 +3,13 @@ import "./chatContent.css";
 
 import TopBar from "./topbar/topbar";
 
-import { use, useEffect } from "react";
+import {  useEffect } from "react";
 import { useState } from "react";
 import socket from "@services/socket";
 import { useIsDirectMessage } from "@/store/userStore";
-import { useChannleTypeStore } from "@/store/channelStore";
 import useRecieverStore from "@/store/recieverStore";
-import useMessageStore from "@/store/messagesStore";
 import useUsernameStore from "@/store/usernameStore";
+
 
 
 type User = {
@@ -19,22 +18,22 @@ type User = {
 };
 
 export default function ChatContent({ user, channel, channelId }: { user: any, channel: any, channelId: any }) {
+  const {username, setUsername} =  useUsernameStore();
+  const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
+  const { reciever, setReciever } = useRecieverStore();
   const [messageInput, setMessageInput] = useState(""); // State for input field
   const [recieverMessages, setRecieverMessages] = useState<{ user: User; sender: string; channel: string; message: string }[]>([]);
   const [senderMessages, setSenderMessages] = useState<{ user: User; sender: string; channel: string; message: string }[]>([]);
   const [avaterUser, setAvaterUser] = useState("");
   const [NameUser, setNameUser] = useState("");
   const [avaterReciever, setAvaterReciever] = useState("");
-  const {username, setUsername} =  useUsernameStore();
-  const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
-  const { reciever, setReciever } = useRecieverStore();
   const [arrayMessages, setArrayMessages] = useState<any>([]);
-  const [isBlockUser, setBlockUser] = useState(false);
   const [serverChannel, setServerChannel] = useState("");
   const [password, setPassword] = useState("");
-  const [isProtected, setIsProtected] = useState(false);
   const [isCorrectPassword, setIsCorrectPassword] = useState(false);
   const [showWrongPassword, setShowWrongPassword] = useState(false);
+  const [isProtected, setIsProtected] = useState(false);
+  const [isBlockUser, setBlockUser] = useState(false);
   const [youAreBaned, setYouAreBaned] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
@@ -62,6 +61,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
 
   //----------- handle key down ----------------
   const handleKeyDown = (e: any) => {
+    checkIfChannelIsProtected();
     if (e.key === 'Enter') {
       e.preventDefault(); // Prevents the default behavior (e.g., new line) for the Enter key
       sendMessage();
@@ -73,21 +73,22 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
 
   const sendMessage =  () => {
     // Send the message input to the serv   
-    if (messageInput === "") return;
+    if (messageInput === "" || channel == "") return;
     
-    if (!isDirectMessage) {
+    if (!isDirectMessage && !isProtected) {
       socket.emit("channelMessage", {
         sender: username,
         channel: channel,
         channelId: channelId,
         message: messageInput,
       });
-      socket.on("channelMessage", (data :any) => {
-        if (data || !isProtected) {
+      socket.on("channelMessage", () => {
+        if (!isProtected) {
+          console.log("channelMessage", channel);
           handlelistChannelMessages();
         }
       });
-    } else {
+    } else if (isDirectMessage && !isBlockUser && !isProtected) {
       socket.emit("directMessage", {
         sender: username,
         reciever: reciever,
@@ -106,8 +107,11 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
 
   // ----------- check if channel is protected ----------------
   const checkIfChannelIsProtected = () => {
-
-    console.log("checkIfChannelIsProtected")
+      if (channel === "general"){
+        console.log("channel is general", isProtected, channel)
+        setIsProtected(false);
+        return;
+      }
       socket.emit("checkPassword", {
           channelId: channelId,
           sender: username,
@@ -124,6 +128,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
           console.log("channel is protected and password is wrong1")
           setIsCorrectPassword(false);
           setShowWrongPassword(true);
+          setIsProtected(true);
           return () => {
             socket.off("checkPassword");
           }
@@ -160,8 +165,6 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     });
   };
 
-  
-
   //----------- handle list channel messages ----------------
 
   const handlelistChannelMessages = () => {
@@ -196,9 +199,9 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
               setSenderMessages([]);
               setRecieverMessages([]);
               setArrayMessages([]);
-              return
+              return;
             }
-            else if (youAreBaned && channel !== "general"){
+             if (youAreBaned && channel !== "general"){
               // set a default message to show that you are baned
               let banedMessage = {
                 user: {
@@ -211,7 +214,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
               }
               // setSenderMessages([banedMessage]);
               setRecieverMessages([banedMessage]);
-              return
+              return;
             }else if (isMuted && channel !== "general"){
               // set a default message to show that you are muted
               let muteMessage = {
@@ -225,9 +228,9 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
               }
               setSenderMessages([]);
               setRecieverMessages([muteMessage]);
-              return
+              return;
             } else if (serverChannel === staticChannelName){
-              
+
               if (usernameFromServer !== usernameFromSession) {
                 // i return 2 arrays one for the sender and the other for the reciever and i check if the username is the sender or the reciever to set the messages
                 setSenderMessages(data.msg);
@@ -235,6 +238,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
                 setNameUser(user?.username);
                 // clear the reciever messages
                 setRecieverMessages([]);
+                
               } else {
                 if (isBlockUser && isDirectMessage){
                   let emptyMessage = {
@@ -264,7 +268,15 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     });
   };
 
- 
+  useEffect(() => {
+    // once the user enter the password and click enter 
+    // check if the password is correct and if it is correct set the isCorrectPassword to true
+    // and if it is not correct set the isCorrectPassword to false and show a message to the user
+    
+    checkIfChannelIsProtected();
+    setIsCorrectPassword(false);
+    setShowWrongPassword(false);
+  }, [channel, channelId]);
 
   //----------- handle list direct messages ----------------
 
@@ -276,10 +288,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
         reciever: reciever,
       });
       socket.on("listDirectMessages", (data) => {
-        console.log("username: ", username)
-        console.log("reciever: ", reciever)
-        console.log("data.msg[0]?.receiver.username", data.msg[0]?.receiver.username)
-        console.log("data.msg[0]?.sender.username", data.msg[0]?.sender.username)
+     
         if (Array.isArray(data.msg)
         && username === data.msg[0]?.receiver.username ||
         username === data.msg[0]?.sender.username 
@@ -317,7 +326,6 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
   //----------- check if the user is muted ----------------
   const checkIfTheUserIsMuted = () => {
     socket.emit("checkIfTheUserIsMuted", {sender: username, channelId: channelId});
-    console.log("channelId", channelId)
     socket.on("checkIfTheUserIsMuted", (data : any) => {
       if (data?.isMuted)
       {
@@ -345,6 +353,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
       checkIfTheUserIsMuted();
       handlelistChannelMessages();
     }
+    
     return () => {
       socket.off("listDirectMessages");
       socket.off("listChannelMessages");
@@ -360,7 +369,7 @@ export default function ChatContent({ user, channel, channelId }: { user: any, c
     }
   } , [
     isDirectMessage,
-    // channel,
+    channel,
     channelId,
     username,
     reciever,

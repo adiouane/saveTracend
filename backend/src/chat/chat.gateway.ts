@@ -5,7 +5,6 @@ import {
   WebSocketServer,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { ChatService } from './chat.service';
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { channelService } from './channel.service';
@@ -26,7 +25,6 @@ export class ChatGateway {
   server: Server;
 
   constructor(
-    private readonly chatService: ChatService,
     private readonly directMessageService: directMessageService,
     private readonly channelService: channelService,
     private readonly prisma: PrismaService,
@@ -230,6 +228,7 @@ export class ChatGateway {
       console.log('Channel not found checkPassword data');
       return;
     }
+    if (channel.visibility !== 'protected') return; // becuse it require password and hash 
     const checkPassword = await bcrypt.compare(data.password, channel.password);
     if (checkPassword) {
       this.server.emit('checkPassword', checkPassword);
@@ -239,19 +238,6 @@ export class ChatGateway {
       return checkPassword;
     }
   }
-
-  // // get all  channels that user own
-  // @SubscribeMessage('listChannels')
-  // async listChannels(
-  //   @MessageBody() data: { sender: string; },
-  //   @ConnectedSocket() client: Socket,
-  // ) {
-  //   const channels = await this.channelService.listChannels(data);
-  //   // this.server.to(data.channel).emit('listChannels', channels);
-  //   this.server.emit('listChannels', channels);
-  //   return channels;
-  // }
-
 
   //listAcceptedChannels
   @SubscribeMessage('listAcceptedChannels')
@@ -274,8 +260,22 @@ export class ChatGateway {
       this.server.emit('listAcceptedChannels', channels);
       return;
     }
-    this.server.emit('listAcceptedChannels', channels);
-    return channels;
+
+    const arrOfChannels = [];
+    // find the channel name
+    for (let i = 0; i < channels.length; i++) {
+      const channel = await this.prisma.channel.findUnique({
+        where: {
+          id: channels[i].channelId,
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      arrOfChannels.push(channel);
+    }
+    this.server.emit('listAcceptedChannels', arrOfChannels);
   }
 
   // listPublicChannels
@@ -449,18 +449,19 @@ export class ChatGateway {
         id: data.channelId,
       },
     });
+
     const channelAdmins = await this.prisma.channelMembership.findMany({
       where: {
         channel: {
           id: channel.id,
         },
-        isAdmin: true,
+        roleId: 'admin',
       },
       select: {
         user: true,
       },
     });
-    this.server.emit('GetChannelAdmins', channelAdmins);
+    this.server.emit('GetChannelAdmins', channelAdmins);    
   }
 
   // make user admin
@@ -1477,6 +1478,7 @@ export class ChatGateway {
       id: string;
     },
   ) {
+    console.log('data', data);
     try {
       if (!data.id) {
         return;
@@ -1486,7 +1488,12 @@ export class ChatGateway {
           id: data.id,
         },
       });
+      if (!user) {
+        console.log('user not found', data.id);
+        return;
+      }
       this.server.emit('getUserById', user);
+      console.log('user', user);
       return user;
     } catch (error) {
       console.error('Error while fetching user by id:', error);
@@ -1512,7 +1519,7 @@ export class ChatGateway {
       });
 
       if (!user) {
-        console.log('user not found', data.sender);
+        console.log('friend not found', data.sender);
         return;
       }
       const friends = await this.prisma.friends.findMany({
