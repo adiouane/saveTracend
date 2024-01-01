@@ -17,22 +17,40 @@ export default function AdminsMembers({ user, channel }: { user: any,  channel: 
   const [member, setMember] = useState<string>("");
   const [sender, setSender] = useState<string>("");
   const [justMemebre, setJustMemebre] = useState<boolean>(false);
+  const [disableListMembers, setDisableListMembers] = useState<boolean>(false);
 
-  const listAdminsAndMembers = (channelId: string) => {
+
+  const listMembers = (channelId: string) => {
+    socket.emit("getChannelById", { id: channelId });
+    socket.on("getChannelById", (data: any) => {
+      console.log("channel: ", data.visibility);
+      if (data.visibility === "public" || data.visibility === "protected" ) {
+        setDisableListMembers(true);
+        return;
+      }else{
+
+        setMembers([]);
+        setAdmins([]);
+        const username = user?.username;
+        socket.emit("ChannelMembers", { channelId, username });
+        socket.on("ChannelMembers", (data: any) => {
+          data?.map((member: any) => {
+            // filter the owner and admins
+            setMembers(data)
+          });
+        });
+      }
+      
+    });
+  };
+
+  const listAdmins = (channelId: string) => {
     setMembers([]);
     setAdmins([]);
-    const username = user?.username;
-    socket.emit("ChannelMembers", { channelId, username });
-    socket.on("ChannelMembers", (data: any) => {
-      data?.map((member: any) => {
-        setMembers((members) => [...members, member?.user].filter((v, i, a) => a.findIndex(t => (t?.username === v?.username)) === i));
-      });
-    });
-
     // list all admins in the channel
     socket.emit("GetChannelAdmins", { channelId });
     socket.on("GetChannelAdmins", (data: any) => {
-      console.log("admins: ", data);
+      // console.log("admins: ", data);
       for (let i = 0; i < data.length; i++) {
         setAdmins((admins) => [...admins, data[i]?.user].filter((v, i, a) => a.findIndex(t => (t?.username === v?.username)) === i));
       }
@@ -42,12 +60,16 @@ export default function AdminsMembers({ user, channel }: { user: any,  channel: 
   // list all members in the channel
   useEffect(() => {
     if (channelId) {
-      listAdminsAndMembers(channelId);
+      setMembers([]);
+      setAdmins([]);
+      listMembers(channelId);
+      listAdmins(channelId);
     }
     return () => {
       socket.off("ChannelMembers");
       socket.off("ChannelAdmins");
       socket.off("getUserById");
+      setDisableListMembers(false);
     }
   }, [channelId]);
 
@@ -146,7 +168,7 @@ export default function AdminsMembers({ user, channel }: { user: any,  channel: 
   return (
     <>
     {
-      channel === "general" ? <div></div> :
+      channel === "general" || disableListMembers ?  <div></div> :
     <div className="bg-slate-900  pr-40 mr-44 w-72 rounded-2xl hidden lg:block admin-div border border-gray-700">
       {!isDirectMessage ? (
         <>

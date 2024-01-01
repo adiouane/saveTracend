@@ -16,12 +16,20 @@ const Notification = ({ user }: { user: any }) => {
     
     socket.emit("notification", {username: user.username});
     socket.on("notification", (data) => {
+      console.log("data1", data);
       setSender([]);
       setSenderUsername("");
 
-      setSender((sender) => [...sender, data[0]?.senderRequests]); // save all sender requests to state
-      setSenderUsername(data[0]?.receiverRequests?.username); // save current user username
-      setNotificationForFriend(!notificationForFriend);
+      for (let i = 0; i < data.length; i++) {
+        console.log("data[i]?.senderRequests?.username", data[i]?.senderRequests?.username);
+        console.log("user.username", user.username);
+        if (data[i]?.senderRequests?.username !== user.username) { // check if sender is not current user
+          setSender((sender) => [...sender, data[i]?.senderRequests]); // save all sender requests to state
+          setSenderUsername(data[i]?.receiverRequests?.username); // save current user username
+          setNotificationForFriend(!notificationForFriend);
+        }
+      
+      }
     });
   };
 

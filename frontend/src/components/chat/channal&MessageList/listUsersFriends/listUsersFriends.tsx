@@ -1,8 +1,10 @@
 import socket from "@/services/socket";
-import { useRef, useEffect, useState, use } from "react";
+import React, { useRef, useEffect, useState, use } from "react";
 import { useIsDirectMessage } from "@/store/userStore";
 import useRecieverStore from "@/store/recieverStore";
 import useMessageStore from "@/store/messagesStore";
+import Link from "next/link";
+import { get } from "http";
 
 
 export default function ListUsersFriends({ username }: { username: any }) {
@@ -12,7 +14,7 @@ export default function ListUsersFriends({ username }: { username: any }) {
   const { reciever, setReciever } = useRecieverStore();
   const [friendsId, setFriendsId] = useState([]);
   const [UserName, setUserName] = useState("");
-  const [showBlock, setShowBlock] = useState(false);
+  const [showBlockInviteTogame, setShowBlockInviteTogame] = useState(false);
   const [noFriends, setNoFriends] = useState(false);
   const [color, setColor] = useState("bg-green-400");
 
@@ -44,6 +46,7 @@ export default function ListUsersFriends({ username }: { username: any }) {
   const getFriends = () => {
     socket.emit("getAllUsersFriends", { sender: username });
 
+    
     socket.on("getAllUsersFriends", (data) => {
       if (data.length === 0) {
         setNoFriends(true);
@@ -55,7 +58,7 @@ export default function ListUsersFriends({ username }: { username: any }) {
       for (let items of data) {
         if (items.MefriendOf?.username === UserName) {
           arr.push(items.friend);
-          setUsers(arr);
+          setUsers(arr.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)); // remove duplicates id from array
         }
       }
     });
@@ -63,6 +66,9 @@ export default function ListUsersFriends({ username }: { username: any }) {
 
   // Use useEffect with users as a dependency to trigger the copy operation
   useEffect(() => {
+    socket.on("acceptFriendRequest", (data) => {
+      getFriends();
+    })
     getFriends();
     return () => {
       socket.off("getAllUsersFriends");
@@ -75,38 +81,39 @@ export default function ListUsersFriends({ username }: { username: any }) {
     setIsDirectMessage(true);
   };
 
-  const blockUser = (username: string) => {
-    // UserName is the username of the user who blocked which is saved in session storage // todo ana
-    socket.emit("blockUser", { willbocked: username, whoblocked: UserName });
-    setShowBlock(!showBlock);
-  };
+  // const blockUser = (username: string) => {
+  //   // UserName is the username of the user who blocked which is saved in session storage // todo ana
+  //   socket.emit("blockUser", { willbocked: username, whoblocked: UserName });
+  //   setShowBlockInviteTogame(!showBlockInviteTogame);
+  // };
 
   return (
     <>
       {users &&
         (Array.isArray(users) ? users : Object.keys(users)).map(
           (user: any, index) => (
-            <>
+            <React.Fragment key={user?.username}>
             
             <div
-              className="flex items-center justify-between py-2  hover:bg-slate-700 rounded-2xl"
-              key={user?.id}
-            >
+              className="flex items-center  justify-between py-2  hover:bg-slate-700 rounded-2xl"
+              key={user?.username}
+              >
               <div
-                className="flex flex-col items-center  w-16 h-16"
+                className="flex flex-col items-center"
                 onClick={() => saveReceiverName(user?.username)}
               >
                 <div
-                  className="flex items-center justify-between space-x-2  cursor-pointer rounded-xl"
-                  key={user?.id}
-                >
+                  className="flex items-center justify-between  space-x-2  cursor-pointer rounded-xl"
+           >
                   <img
-                    className="w-14 h-14 rounded-full object-cover ml-20"
+                    className="w-14 h-14 rounded-full object-cover ml-5"
                     src={user?.avatarUrl}
                     alt="avatar"
                   />
                   <div className="flex">
-                    <div className="flex flex-col">
+                    <div className="flex flex-col"
+                    
+                    >
                       <span className="font-semibold text-md">
                         {user?.username}
                       </span>
@@ -124,69 +131,17 @@ export default function ListUsersFriends({ username }: { username: any }) {
 
                 </div>
               </div>
+              <Link href={`/profile/${user?.id}`}>
               <span
                 className="cursor-pointer pr-5"
-                onClick={() => setShowBlock(!showBlock)}
                 >
-                <svg
-                  width="31"
-                  height="37"
-                  viewBox="0 0 21 37"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  >
-                  <path
-                    d="M15.8457 11.3281C16.8812 11.3281 17.7207 10.3138 17.7207 9.06251C17.7207 7.81124 16.8812 6.79688 15.8457 6.79688C14.8102 6.79688 13.9707 7.81124 13.9707 9.06251C13.9707 10.3138 14.8102 11.3281 15.8457 11.3281Z"
-                    fill="#FFFEFE"
-                    />
-                  <path
-                    d="M15.8457 20.3906C16.8812 20.3906 17.7207 19.3763 17.7207 18.125C17.7207 16.8737 16.8812 15.8594 15.8457 15.8594C14.8102 15.8594 13.9707 16.8737 13.9707 18.125C13.9707 19.3763 14.8102 20.3906 15.8457 20.3906Z"
-                    fill="#FFFEFE"
-                    />
-                  <path
-                    d="M15.8457 29.4531C16.8812 29.4531 17.7207 28.4388 17.7207 27.1875C17.7207 25.9362 16.8812 24.9219 15.8457 24.9219C14.8102 24.9219 13.9707 25.9362 13.9707 27.1875C13.9707 28.4388 14.8102 29.4531 15.8457 29.4531Z"
-                    fill="#FFFEFE"
-                  />
-                </svg>
+                <img  className="w-7 h-7  rounded-3xl mr-2 mt-3 bg-gray-300"
+                src="https://cdn1.iconfinder.com/data/icons/user-interface-4-basic-outline/24/setting_user_profile_management_project_manager-512.png" alt="" />
               </span>
+                </Link>
             </div>
-              {showBlock && (
-                // add menu card to allow user to block or mute
-                <>
-                  <div className=" ml-2 w-80 items-center text-center rounded-md shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5">
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 shadow-sm rounded-md"
-                    >
-                      <div className="flex items-center justify-center hover:text-green-400">
-                        <p>  Play a game</p>
-                        <img src="https://cdn4.iconfinder.com/data/icons/smashicons-sports-md-solid/24/75_-_Ping_Pong_sport_game_play-256.png" className="w-6 h-6 ml-1" />
-                      </div>
-                    </a>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 hover:text-red-500 shadow-sm rounded-md"
-                      onClick={() => blockUser(user.username)}
-                    >
-                      <div className="flex items-center justify-center hover:text-red-500">
-                        <p>Block</p>
-                        <img src="https://cdn0.iconfinder.com/data/icons/google-material-design-3-0/48/ic_block_48px-256.png" className="w-6 h-6 ml-1" />
-                      </div>
-                    </a>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 hover:text-red-500  rounded-md"
-                      onClick={() => setShowBlock(!showBlock)}
-                    >
-                      <div className="flex items-center justify-center hover:text-red-500">
-                     <p> cancel</p>
-                    <img src="https://cdn3.iconfinder.com/data/icons/neutro-interface/32/close-circle-256.png" className="w-6 h-6 ml-1" />
-                      </div>
-                    </a>
-                  </div>
-                </>
-              )}
-            </>
+
+            </React.Fragment>
           )
           )}
     </>

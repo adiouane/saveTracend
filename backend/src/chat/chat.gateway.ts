@@ -75,7 +75,6 @@ export class ChatGateway {
     try {
       // save the messages in an array where ChannelMessage is an object with the message and user
       const messages = await this.channelService.listChannelMessages(data);
-
       if (messages && messages.length > 0) {
         let msg = [];
         messages.forEach((element) => {
@@ -85,12 +84,9 @@ export class ChatGateway {
             });
           }
         });
-
         this.server.to(data.channel).emit('listChannelMessages', { msg });
-        return msg;
       } else {
         console.error('No messages found.');
-        return []; // Return an empty array or handle it according to your application's logic
       }
     } catch (error) {
       console.error('Error while fetching messages:', error);
@@ -159,6 +155,9 @@ export class ChatGateway {
               username: user.username,
             },
           },
+        },
+        include: {
+          user: true,
         },
       });
       this.server.emit('saveChannelName', saveChannel);
@@ -414,6 +413,7 @@ export class ChatGateway {
       console.log('Channel not found ChannelMembers data');
       return;
     }
+
     const channel = await this.prisma.channel.findUnique({
       where: {
         id: data.channelId,
@@ -425,11 +425,19 @@ export class ChatGateway {
           id: channel.id,
         },
       },
-      select: {
-        user: true,
-      },
     });
-    this.server.emit('ChannelMembers', channelMembers);
+
+    const members = []; // get just the user 
+    for (let i = 0; i < channelMembers.length; i++) {
+      const member = await this.prisma.user.findUnique({
+        where: {
+          id: channelMembers[i].userId,
+        },
+      });
+      members.push(member);
+    }
+   
+    this.server.emit('ChannelMembers', members);
   }
 
   // GetChannelAdmins
@@ -1478,7 +1486,6 @@ export class ChatGateway {
       id: string;
     },
   ) {
-    console.log('data', data);
     try {
       if (!data.id) {
         return;
@@ -1493,7 +1500,6 @@ export class ChatGateway {
         return;
       }
       this.server.emit('getUserById', user);
-      console.log('user', user);
       return user;
     } catch (error) {
       console.error('Error while fetching user by id:', error);
@@ -1616,12 +1622,67 @@ export class ChatGateway {
             username: user.username,
           },
         },
+        include: {
+          blocker: true,
+          getblocked: true,
+        },
       });
       if (!blocked) {
         console.log('no blocked users');
       }
       this.server.emit('getblockUser', blocked); // this will return all users
       return blocked;
+    } catch (error) {
+      console.error('Error while fetching user by id:', error);
+      throw error;
+    }
+  }
+
+  //checkIfTheUserIsBlocked
+  @SubscribeMessage('checkIfTheUserIsBlocked')
+  async checkIfTheUserIsBlocked(
+    @MessageBody()
+    data: {
+      sender: string;
+      receiver: string;
+    },
+  ) {
+    try {
+      if (!data.sender && !data.receiver) {
+        return;
+      }
+      const user = await this.prisma.user.findUnique({
+        where: {
+          username: data.sender,
+        },
+      });
+      const blocked = await this.prisma.blockedUsers.findMany({
+        where: {
+          blocker: {
+            username: user.username,
+          },
+          getblocked: {
+            username: data.receiver,
+          },
+        },
+      });
+
+      if (!blocked) {
+        console.log('no blocked users');
+      }
+
+      this.server.emit('checkIfTheUserIsBlocked', blocked); // this will return all users
+
+      // const blockedUsers = [];
+      // for (let i = 0; i < blocked.length; i++) {
+      //   const blockedUser = await this.prisma.user.findUnique({
+      //     where: {
+      //       id: blocked[i].getblockedid,
+      //     },
+      //   });
+      //   blockedUsers.push(blockedUser);
+      // }
+      // this.server.emit('checkIfTheUserIsBlocked', blockedUsers); // this will return all users
     } catch (error) {
       console.error('Error while fetching user by id:', error);
       throw error;

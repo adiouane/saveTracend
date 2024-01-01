@@ -45,7 +45,7 @@ export default function ChannalAndDirectMessage({
         const userData = await JSON.parse(storedUserData);
 
         // Access the username property
-        const saveusername = userData.state.user.username;
+        const saveusername = userData.state.user?.username;
 
         setUsername(saveusername);
       } catch (error) {
@@ -145,7 +145,6 @@ export default function ChannalAndDirectMessage({
   };
 
   const InviteToChannel = (channelName: any, friend: string) => {
-    setIsDirectMessage(false);
     if (channelName === "general") return;
     socket.emit("sendInviteToChannel", {
       sender: username,
@@ -157,6 +156,7 @@ export default function ChannalAndDirectMessage({
       // save data to state as array
       setInviteToChannel([...inviteToChannel, data] as any);
     });
+    setIsDirectMessage(false);
     setInvite(!invite);
   };
 
@@ -174,7 +174,7 @@ export default function ChannalAndDirectMessage({
       }
       // filter out the user who send the invite
       const filterOutUser = usersArry.filter(
-        (user) => user.username !== username
+        (user) => user?.username !== username
       );
       setUsers(filterOutUser);
     });
@@ -218,7 +218,7 @@ export default function ChannalAndDirectMessage({
   }, [username, Islogout, isAlert]);
 
   return (
-    <div className="list-div bg-slate-900 mr-10 ml-10 text-purple-lighter rounded-2xl overflow-hidden border border-gray-800 ">
+    <div className="list-div bg-slate-900 mr-10 ml-10 w-80 sm:40  text-purple-lighter rounded-2xl overflow-hidden border border-gray-800 ">
       {/* <!-- Sidebar Header --> */}
       <div className="text-white mb-2 mt-3 px-4  lg:block flex justify-between">
         <div className="flex-auto ">
@@ -373,14 +373,14 @@ export default function ChannalAndDirectMessage({
                         alt="avatar"
                       />
                       <p className="mx-2 text-base text-gray-200  dark:text-gray-200">
-                        {user.username}
+                        {user?.username}
                       </p>
                     </div>
                     <div className="flex items-center">
                       <button
                         className="px-2 py-1 mr-2 text-xs text-green-600 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-green-400"
                         onClick={() => {
-                          InviteToChannel(channel, user.username);
+                          InviteToChannel(channel, user?.username);
                         }}
                       >
                         Invite

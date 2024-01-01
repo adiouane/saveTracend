@@ -37,8 +37,12 @@ export class notificationService {
                     receiverId: reciverUser.id,
                     status: "pending",
                 },
+                include: {
+                    senderRequests: true,
+                    receiverRequests: true,
+                },
             });
-
+            
             return friend;
             
         }
