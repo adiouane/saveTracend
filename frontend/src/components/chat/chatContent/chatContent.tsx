@@ -3,7 +3,7 @@ import "./chatContent.css";
 
 import TopBar from "./topbar/topbar";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useState } from "react";
 import socket from "@services/socket";
 import { useIsDirectMessage } from "@/store/userStore";
@@ -24,6 +24,7 @@ export default function ChatContent({
   channel: any;
   channelId: any;
 }) {
+  const MessageRef = useRef(null);
   const { username, setUsername } = useUsernameStore();
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
   const { reciever, setReciever } = useRecieverStore();
@@ -71,21 +72,13 @@ export default function ChatContent({
     fetchUsername(); // Fetch the username
   }, []);
 
-  //----------- handle key down ----------------
-  const handleKeyDown = (e: any) => {
-    DirectMessageBlockUser();
-    checkIfChannelIsProtected();
-    if (e.key === "Enter") {
-      e.preventDefault(); // Prevents the default behavior (e.g., new line) for the Enter key
-      sendMessage();
-    }
-  };
+ 
 
   //----------- send message ----------------
 
   const sendMessage = () => {
     // Send the message input to the serv
-    if (messageInput === "" || channel == "") return;
+    if (messageInput === "" || channel === "") return;
 
     if (!isDirectMessage && !isProtected) {
       socket.emit("channelMessage", {
@@ -113,6 +106,22 @@ export default function ChatContent({
     }
 
     setMessageInput("");
+    
+
+    return () => {
+      socket.off("channelMessage");
+      socket.off("directMessage");
+    };
+  };
+
+   //----------- handle key down ----------------
+   const handleKeyDown = (e: any) => {
+    DirectMessageBlockUser();
+    checkIfChannelIsProtected();
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevents the default behavior (e.g., new line) for the Enter key
+      sendMessage();
+    }
   };
 
   // ----------- check if channel is protected ----------------
@@ -406,19 +415,54 @@ export default function ChatContent({
       socket.off("checkPassword");
       socket.off("getUserById");
       socket.off("getblockUser");
-      setArrayMessages([]);
-      setSenderMessages([]);
-      setRecieverMessages([]);
+      socket.off("checkIfTheUserIsBlocked");
+      socket.off("channelMessage");
+      socket.off("directMessage");
+      socket.off("getAllUsersFriends");
+      socket.off("acceptFriendRequest");
+      socket.off("sendFriendRequest");
+      socket.off("notification");
+      socket.off("joinChannel");
+      // setArrayMessages([]);
+      // setSenderMessages([]);
+      // setRecieverMessages([]);
     };
   }, [
     isDirectMessage,
     channel,
-    channelId,
-    username,
-    reciever,
+    // channelId,
+    // username,
+    // reciever,
     isCorrectPassword,
     youAreBaned,
   ]);
+
+  
+  useEffect(() => {
+    const chatMessageRef = MessageRef.current;
+    if (chatMessageRef) {
+      (chatMessageRef as any).scrollTop = (chatMessageRef as any).scrollHeight;
+      // to explain this code i will give an example
+      // if the chat content is 500px and the chat messages is 1000px
+      // the scroll bar will be at the bottom of the chat
+      // so i will set the scroll bar to the bottom of the chat
+      // to make the user see the last message
+
+      // the MessageRef is the div that contains the messages
+      // the chatMessageRef is the div that contains the chat content
+      // the scrollHeight is the height of the chat messages
+      // the scrollTop is the height of the chat content
+    }
+
+  }, [arrayMessages]);
+
+  // auto scroll to the bottom of the chat for channel messages
+  useEffect(() => {
+    const chatMessageRef = MessageRef.current;
+    if (chatMessageRef) {
+      (chatMessageRef as any).scrollTop = (chatMessageRef as any).scrollHeight;
+    }
+  }, [senderMessages]);
 
   return (
     <div className="chat-content flex-1 flex flex-col overflow-hidden rounded-3xl shadow border border-gray-800 ">
@@ -426,7 +470,9 @@ export default function ChatContent({
 
       {/* <!-- Chat direct messages --> */}
       {isDirectMessage ? (
-        <div className=" p-14 flex-1 overflow-auto">
+        <div className=" p-14 flex-1 overflow-auto"
+        ref={MessageRef}
+        >
           {
             <div>
               {arrayMessages.map((message: any, index: number) => (
@@ -467,8 +513,12 @@ export default function ChatContent({
         </div>
       ) : (
         // channel messages
-        <div className=" p-14 flex-1 overflow-auto">
-          <div className="flex flex-col mb-4 text-sm">
+        <div className=" p-14 flex-1 overflow-auto"
+        ref={MessageRef}
+        >
+          <div className="flex flex-col mb-4 text-sm"
+          
+          >
             {isProtected && !isCorrectPassword && (
               // input to enter the password
 
@@ -576,7 +626,7 @@ export default function ChatContent({
             />
             <span
               className="text-3xl text-grey p-2 bg-slate-800"
-              onClick={sendMessage}
+              onClick={()=> sendMessage()}
             >
               <svg
                 width="21"

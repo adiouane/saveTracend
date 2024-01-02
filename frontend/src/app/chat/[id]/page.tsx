@@ -31,16 +31,22 @@ export default function Chat() {
   function setChannalPageAndSavedefaultName() {
     setIsDirectMessage(false);
     setIsChannel(true);
-    setChannel("general");
+    // setChannel("general");
+    switchChannelName("general");
   }
 
 
   return (
     <div className="chat-container overflow-auto">
       <div className="flex h-full">
-          <ChannalAndDirectMessage user={user} switchChannelName={switchChannelName} 
-          setChannalPageAndSavedefaultName={setChannalPageAndSavedefaultName}/>
-            <ChatContent user={user} channel={channel} channelId={channelId}/>
+          <ChannalAndDirectMessage 
+              user={user}
+              switchChannelName={switchChannelName} 
+              setChannalPageAndSavedefaultName={setChannalPageAndSavedefaultName}/>
+            <ChatContent
+              user={user}
+              channel={channel}
+              channelId={channelId}/>
         {!isDirectMessage ? (
           <>
             <AdminsMembers user={user} channel={channel} />
