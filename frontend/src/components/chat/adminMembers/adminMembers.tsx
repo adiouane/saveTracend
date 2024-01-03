@@ -1,12 +1,16 @@
 "use client";
 import { useIsDirectMessage } from "@/store/userStore";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import socket from "@/services/socket";
 import { useChannleIdStore } from "@/store/channelStore";
-import { channel } from "diagnostics_channel";
 
-
-export default function AdminsMembers({ user, channel }: { user: any,  channel: string }) {
+export default function AdminsMembers({
+  user,
+  channel,
+}: {
+  user: any;
+  channel: string;
+}) {
   const { isDirectMessage, setIsDirectMessage } = useIsDirectMessage();
   const { channelId, setChannelId } = useChannleIdStore(); // channel id
   const [members, setMembers] = useState<any[]>([]);
@@ -18,29 +22,28 @@ export default function AdminsMembers({ user, channel }: { user: any,  channel: 
   const [sender, setSender] = useState<string>("");
   const [justMemebre, setJustMemebre] = useState<boolean>(false);
   const [disableListMembers, setDisableListMembers] = useState<boolean>(false);
-
+  const [showMembersAndAdminsCmp, setShowMembersAndAdmins] =
+    useState<boolean>(false);
 
   const listMembers = (channelId: string) => {
     socket.emit("getChannelById", { id: channelId });
     socket.on("getChannelById", (data: any) => {
-      console.log("channel: ", data.visibility);
-      if (data.visibility === "public" || data.visibility === "protected" ) {
+      if (data.visibility === "public" || data.visibility === "protected") {
         setDisableListMembers(true);
         return;
-      }else{
-
+      } else {
         setMembers([]);
         setAdmins([]);
         const username = user?.username;
         socket.emit("ChannelMembers", { channelId, username });
         socket.on("ChannelMembers", (data: any) => {
+          // TODO: filter the sender
           data?.map((member: any) => {
             // filter the owner and admins
-            setMembers(data)
+            setMembers(data);
           });
         });
       }
-      
     });
   };
 
@@ -52,7 +55,11 @@ export default function AdminsMembers({ user, channel }: { user: any,  channel: 
     socket.on("GetChannelAdmins", (data: any) => {
       // console.log("admins: ", data);
       for (let i = 0; i < data.length; i++) {
-        setAdmins((admins) => [...admins, data[i]?.user].filter((v, i, a) => a.findIndex(t => (t?.username === v?.username)) === i));
+        setAdmins((admins) =>
+          [...admins, data[i]?.user].filter(
+            (v, i, a) => a.findIndex((t) => t?.username === v?.username) === i
+          )
+        );
       }
     });
   };
@@ -70,60 +77,53 @@ export default function AdminsMembers({ user, channel }: { user: any,  channel: 
       socket.off("ChannelAdmins");
       socket.off("getUserById");
       setDisableListMembers(false);
-    }
+    };
   }, [channelId]);
-
 
   const makeAdmin = (member: string, channelId: string) => {
     setSender(user?.username);
     setMember(member);
     socket.emit("makeAdmin", { sender, member, channelId });
     socket.on("makeAdmin", (data: any) => {
-      
-      if (!data){
+      if (!data) {
         alert("you are not the owner or admin of the channel");
         return;
-      }else{
+      } else {
         alert("admin added");
       }
       setSetting(!Setting);
-      listAdminsAndMembers(channelId);
     });
-  }
+  };
 
   const kickMember = (member: string, channelId: string) => {
     setSender(user?.username);
     setMember(member);
     socket.emit("kickMember", { sender, member, channelId });
     socket.on("kickMember", (data: any) => {
-      console.log("kick member: ", data);
-      if (!data){
+      if (!data) {
         alert("you are not the owner or admin of the channel");
         return;
-      }
-      else{
+      } else {
         alert("member kicked");
       }
       setSetting(!Setting);
     });
-  }
+  };
 
   const BanMember = (member: string, channelId: string) => {
     setSender(user?.username);
     setMember(member);
     socket.emit("BanMember", { sender, member, channelId });
     socket.on("BanMember", (data: any) => {
-      console.log("ban member: ", data);
-      if (!data){
+      if (!data) {
         alert("you can't ban the member");
         return;
-      }else{
+      } else {
         alert("member banned");
       }
       setSetting(!Setting);
-
     });
-  }
+  };
 
   const MuteMember = (member: string, channelId: string) => {
     setSender(user?.username);
@@ -135,155 +135,190 @@ export default function AdminsMembers({ user, channel }: { user: any,  channel: 
 
     let Muted = false;
     // Emit a socket event to the server to mute the member
-    socket.emit("MuteMember", { sender, member, channelId,  Muted});
+    socket.emit("MuteMember", { sender, member, channelId, Muted });
     socket.on("MuteMember", (data: any) => {
-      console.log("1: ", data)
       if (data === "owner muted member") {
         setShowTimeMuted(!ShowTimeMuted);
-      }
-      else if (data === "admin muted member") {
+      } else if (data === "admin muted member") {
         setShowTimeMuted(!ShowTimeMuted);
-      }
-      else{
+      } else {
         setJustMemebre(!justMemebre);
       }
     });
-   
+
     // wait for time to end
     setTimeout(() => {
       Muted = true;
       socket.emit("MuteMember", { sender, member, channelId, Muted });
     }, muteDuration);
-
   };
 
   const close = () => {
     setSetting(!Setting);
     setShowTimeMuted(!ShowTimeMuted);
     setJustMemebre(false);
-  }
+  };
 
-
+  const hideAdminsMembers = () => {
+    const adminMembers = document.querySelector(".adminMembers");
+    alert(adminMembers?.classList.contains("hidden") + " " + showMembersAndAdminsCmp)
+    if (adminMembers?.classList.contains("hidden"))
+      adminMembers?.classList.remove("hidden");
+    else
+      adminMembers?.classList.toggle("hidden");
+    
+    setShowMembersAndAdmins(!showMembersAndAdminsCmp);
+  };
 
   return (
     <>
-    {
-      channel === "general" || disableListMembers ?  <div></div> :
-    <div className="bg-slate-900  pr-40 mr-44 w-72 rounded-2xl hidden lg:block admin-div border border-gray-700">
-      {!isDirectMessage ? (
-        <>
-          {/* admins */}
-          <h3 className=" font-light text-white pl-8 py-10 opacity-50">
-            # Admins
-          </h3>
-          {
-            admins?.map((admin, index) => (
-              <div key={admin?.username} className="flex items-center  relative ml-2 mr-2">
-                <img src={admin?.avatarUrl} alt="" className="rounded-full h-14 ml-7 my-2 mr-2" />
-                <span className="text-white font-bold  opacity-90 ml-2 mr-2">
-                  {admin?.username}
-                </span>
-              </div>
-            ))
-          }
-          {/* members */}
-          <h3 className=" font-light text-white pl-8 py-10 opacity-50">
-            # Members
-          </h3>
-
-          {
-            members?.map((member, index) => (
-              <div key={member?.username} className="ml-8 w-56">
-                <div className="flex justify-between items-center w-full">
-                  <img src={member?.avatarUrl} alt="" className="rounded-full h-14 ml-2 my-2 mr-2 " />
-                  <span className="text-white font-bold  opacity-90" >
-                    {member?.username}
-                  </span>
-                  <button className="border rounded-3xl text-sm p-1 ml-7 border-gray-700 hover:bg-gray-700"
-                    onClick={() => setSetting(!Setting)}
-                  >
-                    <svg
-                      width="31"
-                      height="37"
-                      viewBox="0 0 21 37"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M15.8457 11.3281C16.8812 11.3281 17.7207 10.3138 17.7207 9.06251C17.7207 7.81124 16.8812 6.79688 15.8457 6.79688C14.8102 6.79688 13.9707 7.81124 13.9707 9.06251C13.9707 10.3138 14.8102 11.3281 15.8457 11.3281Z"
-                        fill="#FFFEFE"
-                      />
-                      <path
-                        d="M15.8457 20.3906C16.8812 20.3906 17.7207 19.3763 17.7207 18.125C17.7207 16.8737 16.8812 15.8594 15.8457 15.8594C14.8102 15.8594 13.9707 16.8737 13.9707 18.125C13.9707 19.3763 14.8102 20.3906 15.8457 20.3906Z"
-                        fill="#FFFEFE"
-                      />
-                      <path
-                        d="M15.8457 29.4531C16.8812 29.4531 17.7207 28.4388 17.7207 27.1875C17.7207 25.9362 16.8812 24.9219 15.8457 24.9219C14.8102
-                    24.9219 13.9707 25.9362 13.9707 27.1875C13.9707 28.4388 14.8102 29.4531 15.8457 29.4531Z"
-                        fill="#FFFEFE"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {
-                  Setting && (
-                    <div className="absolute top-0 left-[465px] right-0 bottom-0 bg-slate-800 w-[666px] h-[360px] rounded-lg flex flex-col items-center justify-center">
-                      <button className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border border-gray-700 hover:bg-gray-700"
-                        onClick={() => makeAdmin(member.username, channelId)}
-                      >Make Admin</button>
-                      <button className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
-                  "
-                        onClick={() => kickMember(member.username, channelId)}
-                      >Kick User</button>
-                      <button className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
-                  "
-                        onClick={() => BanMember(member.username, channelId)}
-                      >Ban User</button>
-                      <button className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
-                  "
-                        onClick={() => MuteMember(member.username, channelId)}
-                      >Mute User</button>
-                      {
-                        ShowTimeMuted && !justMemebre && (
-                          <div className="flex flex-col items-center justify-center">
-                            <h6 className="text-white font-thin text-xl"
-                             >
-                              <span className="text-red-500">User <span className="text-blue-400"> {member.username} </span>
-                              is Muted <span className="text-blue-400"> for 1 minute</span>
-                              </span>
-
-                            </h6>
-                            </div>
-                        )
-                      }
-                      {
-                        justMemebre && !ShowTimeMuted && (
-                          <div className="flex flex-col items-center justify-center">
-                            <h6 className="text-white font-thin text-xl"
-                             >
-                              <span className="text-red-500">You Can't Mute <span className="text-blue-400"> {member.username} </span>
-                              </span>
-
-                            </h6>
-                            </div>
-                        )
-                      }
-                      <button
-                        className=" mr-70 border rounded-3xl text-sm p-1 max-w-20 border-gray-700 hover:bg-gray-700 "
-                        onClick={() => close()}>close</button>
-                    </div>
-                  )
-                }
-              </div>
-            ))
-          }
-        </>
+      {channel === "general" || disableListMembers ? (
+        <div></div>
       ) : (
-        <hr />
+        <>
+          <div
+            className="bg-slate-900 rounded-2xl border border-gray-700 adminMembers
+    "
+          >
+            {!isDirectMessage ? (
+              <>
+                {/* admins */}
+            <button className="border text-sm p-3 max-w-20 border-gray-700 hover:bg-gray-700"
+              onClick={() => hideAdminsMembers()}
+              >
+              close
+            </button>
+                <h3 className=" font-light text-white pl-8 py-10 opacity-50">
+                  # Admins
+                </h3>
+                {admins?.map((admin, index) => (
+                  <div
+                    key={admin?.username}
+                    className="flex flex-col items-center relative w-56 mb-5
+              -ml-10 2xl:flex-row 2xl:justify-start 2xl:items-center 2xl:ml-10
+              "
+                  >
+                    <img
+                      src={admin?.avatarUrl}
+                      alt=""
+                      className="rounded-full h-14 -ml-5 "
+                    />
+                    <span className="text-white font-bold  opacity-90 2xl:ml">
+                      {admin?.username}
+                    </span>
+                  </div>
+                ))}
+                {/* members */}
+                <h3 className=" font-light text-white pl-8 py-10 opacity-50">
+                  # Members
+                </h3>
+
+                {members?.map((member, index) => (
+                  <div key={member?.username} className="ml-8 w-56 mb-5">
+                    <div
+                      className="flex flex-row items-center relative 
+                  
+                "
+                    >
+                      <img
+                        src={member?.avatarUrl}
+                        alt=""
+                        className="rounded-full h-14 "
+                      />
+                      <button
+                        className="border rounded-3xl text-sm p-1 ml-6 border-gray-700 hover:bg-gray-700
+                  2xl:ml-24
+                  "
+                        onClick={() => setSetting(!Setting)}
+                      >
+                        <img
+                          className="h-7 w-7 bg-slate-300 rounded-2xl hover:bg-green-400"
+                          src="https://cdn4.iconfinder.com/data/icons/yuai-mobile-banking-vol-1/100/yuai-1-09-512.png"
+                          alt=""
+                        />
+                      </button>
+                    </div>
+                    <span className="text-white font-bold  opacity-90">
+                      {member?.username}
+                    </span>
+
+                    {Setting && (
+                      <div className="absolute top-0 right-72 bottom-0 bg-slate-800 w-[666px] h-[360px] rounded-lg flex flex-col items-center justify-center">
+                        <button
+                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border border-gray-700 hover:bg-gray-700"
+                          onClick={() => makeAdmin(member.username, channelId)}
+                        >
+                          Make Admin
+                        </button>
+                        <button
+                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
+                  "
+                          onClick={() => kickMember(member.username, channelId)}
+                        >
+                          Kick User
+                        </button>
+                        <button
+                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
+                  "
+                          onClick={() => BanMember(member.username, channelId)}
+                        >
+                          Ban User
+                        </button>
+                        <button
+                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
+                  "
+                          onClick={() => MuteMember(member.username, channelId)}
+                        >
+                          Mute User
+                        </button>
+                        {ShowTimeMuted && !justMemebre && (
+                          <div className="flex flex-col items-center justify-center">
+                            <h6 className="text-white font-thin text-xl">
+                              <span className="text-red-500">
+                                User{" "}
+                                <span className="text-blue-400">
+                                  {" "}
+                                  {member.username}{" "}
+                                </span>
+                                is Muted{" "}
+                                <span className="text-blue-400">
+                                  {" "}
+                                  for 1 minute
+                                </span>
+                              </span>
+                            </h6>
+                          </div>
+                        )}
+                        {justMemebre && !ShowTimeMuted && (
+                          <div className="flex flex-col items-center justify-center">
+                            <h6 className="text-white font-thin text-xl">
+                              <span className="text-red-500">
+                                You Can't Mute{" "}
+                                <span className="text-blue-400">
+                                  {" "}
+                                  {member.username}{" "}
+                                </span>
+                              </span>
+                            </h6>
+                          </div>
+                        )}
+                        <button
+                          className=" mr-70 border rounded-3xl text-sm p-1 max-w-20 border-gray-700 hover:bg-gray-700 "
+                          onClick={() => close()}
+                        >
+                          close
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            ) : (
+              <hr />
+            )}
+          </div>
+        </>
       )}
-    </div>
-  }
     </>
   );
 }

@@ -25,7 +25,7 @@ const CustomLayout = ({ children }: { children: React.ReactNode }) => {
     <>
       <NavBar />
       <AsideBar />
-      <div className="px-10 sm:ml-64">
+      <div className="px-8 sm:ml-48">
         <div className="page-container p-4 border-2 rounded-lg">{children}</div>
       </div>
     </>

@@ -50,6 +50,7 @@ export default function ChatContent({
   const [arrayBlockedUsers, setArrayBlockedUsers] = useState<any>([]);
   const [blockerUsername, setBlockerUsername] = useState<any>([]);
   const [getblockedid, setGetblockedid] = useState<any>([]);
+  // const [isChangePassword, setIsChangePassword] = useState(false);
 
   async function fetchUsername() {
     const storedUserData = sessionStorage.getItem("user-store");
@@ -71,6 +72,32 @@ export default function ChatContent({
     // Search for the username and set it in the state
     fetchUsername(); // Fetch the username
   }, []);
+
+  useEffect(() => {
+    const chatMessageRef = MessageRef.current;
+    if (chatMessageRef) {
+      (chatMessageRef as any).scrollTop = (chatMessageRef as any).scrollHeight;
+      // to explain this code i will give an example
+      // if the chat content is 500px and the chat messages is 1000px
+      // the scroll bar will be at the bottom of the chat
+      // so i will set the scroll bar to the bottom of the chat
+      // to make the user see the last message
+
+      // the MessageRef is the div that contains the messages
+      // the chatMessageRef is the div that contains the chat content
+      // the scrollHeight is the height of the chat messages
+      // the scrollTop is the height of the chat content
+    }
+
+  }, [arrayMessages]);
+
+  // auto scroll to the bottom of the chat for channel messages
+  useEffect(() => {
+    const chatMessageRef = MessageRef.current;
+    if (chatMessageRef) {
+      (chatMessageRef as any).scrollTop = (chatMessageRef as any).scrollHeight;
+    }
+  }, [senderMessages]);
 
  
 
@@ -423,46 +450,64 @@ export default function ChatContent({
       socket.off("sendFriendRequest");
       socket.off("notification");
       socket.off("joinChannel");
-      // setArrayMessages([]);
-      // setSenderMessages([]);
-      // setRecieverMessages([]);
     };
   }, [
     isDirectMessage,
     channel,
-    // channelId,
-    // username,
-    // reciever,
     isCorrectPassword,
     youAreBaned,
   ]);
 
+
+  // //----------- remove password ----------------
+  // const removePassword = (channelId: any, username: any) => {
+  //   socket.emit("removePassword", { channelId: channelId, sender: username });
+  //   socket.on("removePassword", (data: any) => {
+  //     console.log(data);
+  //     if (data){
+  //       alert("password removed")
+  //       changePassword(channelId, username, password);
+  //       console.log("password removed");
+  //       return;
+
+  //     }else{
+  //       alert("you are not the channel owner")
+  //       return;
+  //     }
+  //   });
+  //   setPassword("");
+  //   return () => {
+  //     socket.off("removePassword");
+  //   }
+  //   // clr the password input
+  // };
+
+  // //----------- change password ----------------
+  // const changePassword = (channelId: string, username: string, password: string) => {
+  //   // take input from the user and send it to the server using html input aler box
+
+  //   const passwordInput = prompt("Please enter your new password");
+  //   if (passwordInput === null || passwordInput === "") {
+  //     return;
+  //   }
+  //   password = passwordInput;
+  //   socket.emit("changePassword", { channelId: channelId, sender: username, password: password});
+  //   socket.on("changePassword", (data: any) => {
+  //     console.log(data);
+  //     if (data){
+  //       alert("password changed")
+  //     }else{
+  //       alert("you are not the channel owner")
+  //     }
+  //   });
+  //   setIsChangePassword(false);
+  //   return () => {
+  //     socket.off("changePassword");
+
+  //   }
+  // };
   
-  useEffect(() => {
-    const chatMessageRef = MessageRef.current;
-    if (chatMessageRef) {
-      (chatMessageRef as any).scrollTop = (chatMessageRef as any).scrollHeight;
-      // to explain this code i will give an example
-      // if the chat content is 500px and the chat messages is 1000px
-      // the scroll bar will be at the bottom of the chat
-      // so i will set the scroll bar to the bottom of the chat
-      // to make the user see the last message
 
-      // the MessageRef is the div that contains the messages
-      // the chatMessageRef is the div that contains the chat content
-      // the scrollHeight is the height of the chat messages
-      // the scrollTop is the height of the chat content
-    }
-
-  }, [arrayMessages]);
-
-  // auto scroll to the bottom of the chat for channel messages
-  useEffect(() => {
-    const chatMessageRef = MessageRef.current;
-    if (chatMessageRef) {
-      (chatMessageRef as any).scrollTop = (chatMessageRef as any).scrollHeight;
-    }
-  }, [senderMessages]);
 
   return (
     <div className="chat-content flex-1 flex flex-col overflow-hidden rounded-3xl shadow border border-gray-800 ">
@@ -542,20 +587,23 @@ export default function ChatContent({
                       Enter
                     </button>
                   </div>
-                  <div className="flex ">
+                  {/* <div className="flex ">
                     <button
                       type="button"
                       className="h-10 px-5 m-2 font-sans hover:font-semibold text-gray-100 transition-colors duration-150 bg-gray-700 rounded-lg focus:shadow-outline hover:bg-gray-800"
-                    >
+                    onClick={() => removePassword(channelId, username)}
+                   >
                       Remove Password
                     </button>
                     <button
                       type="button"
                       className="h-10 px-5 m-2 text-gray-100 font-sans hover:font-semibold transition-colors duration-150 bg-gray-700 rounded-lg focus:shadow-outline hover:bg-gray-800"
+                      onClick={() => changePassword(channelId, username, password)}
                     >
                       Change Password
                     </button>
-                  </div>
+                   
+                  </div> */}
                   {showWrongPassword && (
                     <div>
                       <span className="text-red-500 font-bold ml-2">
@@ -563,6 +611,22 @@ export default function ChatContent({
                       </span>
                     </div>
                   )}
+                   {/* {
+                      isChangePassword && (
+                        <div className="flex items-center justify-between">
+                          <input
+                            type="text"
+                            name="password"
+                            placeholder="Enter new password ..."
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onKeyDown={()=> changePassword(channelId, username, password)}
+                            className="bg-slate-900 w-full my-5 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-800"
+                          />
+                        </div>
+                      )
+
+                    } */}
                 </div>
               </div>
             )}

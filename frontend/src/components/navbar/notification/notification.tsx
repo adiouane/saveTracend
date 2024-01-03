@@ -1,6 +1,7 @@
 import socket from "@/services/socket";
 import { channel } from "diagnostics_channel";
 import { useState, useEffect, use } from "react";
+import { IoClipboardSharp } from "react-icons/io5";
 
 const Notification = ({ user }: { user: any }) => {
   const [notificationForFriend, setNotificationForFriend] = useState(false);
@@ -16,13 +17,10 @@ const Notification = ({ user }: { user: any }) => {
     
     socket.emit("notification", {username: user.username});
     socket.on("notification", (data) => {
-      console.log("data1", data);
       setSender([]);
       setSenderUsername("");
 
       for (let i = 0; i < data.length; i++) {
-        console.log("data[i]?.senderRequests?.username", data[i]?.senderRequests?.username);
-        console.log("user.username", user.username);
         if (data[i]?.senderRequests?.username !== user.username) { // check if sender is not current user
           setSender((sender) => [...sender, data[i]?.senderRequests]); // save all sender requests to state
           setSenderUsername(data[i]?.receiverRequests?.username); // save current user username
@@ -31,19 +29,32 @@ const Notification = ({ user }: { user: any }) => {
       
       }
     });
-  };
 
-  useEffect(() => {
-    socket.on("sendInviteToChannel", (data : any) => {
-      // save data to state as array
-      setChannelname(data.channel?.name);
-      setUserWhoSendInvite(data.sender?.username);
-      setUserWhoWillaAcceptInvite(data.receiver?.username);
-      setIdOfChannel(data.channel?.id);
+    socket.emit("listinviteChannel", {username: user.username});
+    socket.on("listinviteChannel", (data) => {
+      data.forEach((element: any) => {
+        socket.emit("getChannelById", {id: element?.channelId});
+        socket.on("getChannelById", (channel) => {
+          setChannelname(channel?.name);
+        })
+        socket.emit("getUserById", {id: element?.senderId});
+        socket.on("getUserById", (sender) => {
+          setUserWhoSendInvite(sender?.username);
+        })
+        setUserWhoWillaAcceptInvite(user?.username);
+      }
+      );
 
     });
-    
-  }, [channelname]);
+
+    return () => {
+      socket.off("notification");
+      socket.off("listinviteChannel");
+      socket.off("getChannelById");
+      socket.off("getUserById");
+    }
+  };
+;
 
 
   const saveFriendsToDB = async (senderUsername: string) => {
@@ -154,7 +165,7 @@ const Notification = ({ user }: { user: any }) => {
           )}
         </div>
            {
-           channelname &&  user?.username !== userWhoSendInvite && notificationForFriend &&
+           channelname &&  user?.username !== userWhoSendInvite  &&
             (
               <div className="absolute top-0 right-0 w-64 p-2 mt-10 z-40 bg-white rounded-md shadow-xl dark:bg-gray-800">
                     <p className="mx-2 text-sm text-gray-800 dark:text-gray-200"> <span

@@ -8,7 +8,7 @@ import { useIsDirectMessage } from "@/store/userStore";
 import { useChannleIdStore, useChannleTypeStore } from "@/store/channelStore";
 import useUsernameStore from "@/store/usernameStore";
 import React from "react";
-import CustomAlert from './listUsersFriends/CustomAlert';
+import CustomAlert from "./listUsersFriends/CustomAlert";
 
 export default function ChannalAndDirectMessage({
   user,
@@ -35,6 +35,7 @@ export default function ChannalAndDirectMessage({
   const [Islogout, setIslogout] = useState(false); // list of channelsId
   const [privateChannels, setPrivateChannels] = useState<any[]>([]); // list of channelsId
   const [isAlert, setIsAlert] = useState(false); // list of channelsId
+  const [isChangePassword, setIsChangePassword] = useState(false);
 
   // TODO: add this to costum hook
   async function fetchUsername() {
@@ -62,9 +63,8 @@ export default function ChannalAndDirectMessage({
 
   const showAlert = () => {
     const message = "channel created successfully";
-    return <CustomAlert message={message}/>;
+    return <CustomAlert message={message} />;
   };
-
 
   useEffect(() => {
     showAlert();
@@ -88,7 +88,6 @@ export default function ChannalAndDirectMessage({
     }
   };
 
-
   const listAcceptedChannels = () => {
     // list all accepted channels
     socket.emit("listAcceptedChannels", {
@@ -96,7 +95,8 @@ export default function ChannalAndDirectMessage({
     });
 
     socket.on("listAcceptedChannels", (data: any) => {
-      if (data[0]?.user?.username === username || !data[0]?.user?.username) return;
+      if (data[0]?.user?.username === username || !data[0]?.user?.username)
+        return;
       // conver the data to array
       setAcceptedChannels(
         data.filter((channel: any) => channel.name !== "general")
@@ -118,13 +118,11 @@ export default function ChannalAndDirectMessage({
   };
 
   const listProtectedChannels = () => {
-    
     // list all protected channels
     socket.emit("listProtectedChannels", {
       sender: username,
     });
     socket.on("listProtectedChannels", (data: any) => {
-
       setProtectedChannel(
         data.filter((channel: any) => channel.name !== "general")
       );
@@ -137,7 +135,7 @@ export default function ChannalAndDirectMessage({
       sender: username,
     });
     socket.on("listPrivateChannels", (data: any) => {
-      if (data[0]?.user?.username !== username ) return;
+      if (data[0]?.user?.username !== username) return;
       setPrivateChannels(
         data.filter((channel: any) => channel.name !== "general")
       );
@@ -199,6 +197,44 @@ export default function ChannalAndDirectMessage({
     });
   };
 
+    //----------- remove password ----------------
+    const removePassword = (channelId: any, username: any) => {
+      socket.emit("removePassword", { channelId: channelId, sender: username });
+      socket.on("removePassword", (data: any) => {
+        if (data){
+          alert("password removed")
+          changePassword(channelId, username, password)
+        }else{
+          alert("you are not the channel owner")
+        }
+      });
+    };
+
+      //----------- change password ----------------
+  const changePassword = (channelId: string, username: string, password: string) => {
+    // take input from the user and send it to the server using html input aler box
+
+    const passwordInput = prompt("Please enter your new password");
+    if (passwordInput === null || passwordInput === "") {
+      return;
+    }
+    password = passwordInput;
+    socket.emit("changePassword", { channelId: channelId, sender: username, password: password});
+    socket.on("changePassword", (data: any) => {
+      console.log(data);
+      if (data){
+        alert("password changed")
+      }else{
+        alert("you are not the channel owner")
+      }
+    });
+    setIsChangePassword(false);
+    return () => {
+      socket.off("changePassword");
+
+    }
+  };
+
   useEffect(() => {
     if (username === "") return;
     listPublicChannels();
@@ -218,40 +254,18 @@ export default function ChannalAndDirectMessage({
   }, [username, Islogout, isAlert]);
 
   return (
-    <div className="list-div bg-slate-900 mr-10 ml-10 w-80 sm:40  text-purple-lighter rounded-2xl overflow-hidden border border-gray-800 ">
+    <div className="list-div bg-slate-900 mr-8  w-80   text-purple-lighter rounded-2xl overflow-hidden border border-gray-800 ">
       {/* <!-- Sidebar Header --> */}
-      <div className="text-white mb-2 mt-3 px-4  lg:block flex justify-between">
-        <div className="flex-auto ">
-          <div className="flex items-center justify-between">
-            <hr />
-            <span>
-              <svg
-                className="w-6 h-6 text-whote opacity-75 dark:text-white cursor-pointer lg:hidden"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                channels
-                <path d="M1 5h1.424a3.228 3.228 0 0 0 6.152 0H19a1 1 0 1 0 0-2H8.576a3.228 3.228 0 0 0-6.152 0H1a1 1 0 1 0 0 2Zm18 4h-1.424a3.228 3.228 0 0 0-6.152 0H1a1 1 0 1 0 0 2h10.424a3.228 3.228 0 0 0 6.152 0H19a1 1 0 0 0 0-2Zm0 6H8.576a3.228 3.228 0 0 0-6.152 0H1a1 1 0 0 0 0 2h1.424a3.228 3.228 0 0 0 6.152 0H19a1 1 0 0 0 0-2Z" />
-              </svg>
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* channels  */}
-      <div className="mb-8">
+      <div className="mb-8 mt-5">
         <div className="px-4 mb-2 text-white flex justify-between items-center">
           <div className="opacity-40 text-white font-thin shadow-lg ">
             Channels
           </div>
           <div>
             <CreateChannal addChannel={addChannel} />
-            { 
-              isAlert &&
-             showAlert()
-            }
+            {isAlert && showAlert()}
           </div>
         </div>
         <div
@@ -278,17 +292,26 @@ export default function ChannalAndDirectMessage({
                       <p>
                         <span className="mr-2"># {channel?.name}</span>
                       </p>
-                      <span onClick={() => listFriends()}>
-                        <svg
-                          className="w-4 h-4 text-gray-500 dark:text-white"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="currentColor"
-                          viewBox="0 0 20 18"
-                        >
-                          <path d="M6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Zm11-3h-2V5a1 1 0 0 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 0 0 2 0V9h2a1 1 0 1 0 0-2Z" />
-                        </svg>
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span onClick={() => listFriends()}>
+                          <svg
+                            className="w-4 h-4 text-gray-500 dark:text-white"
+                            aria-hidden="true"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="currentColor"
+                            viewBox="0 0 20 18"
+                          >
+                            <path d="M6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Zm11-3h-2V5a1 1 0 0 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 0 0 2 0V9h2a1 1 0 1 0 0-2Z" />
+                          </svg>
+                        </span>
+
+                        <img
+                          className="h-5 w-5 ml-2 bg-slate-300 rounded-xl hover:bg-red-500 hover:text-white hover:opacity-100 cursor-pointer"
+                          onClick={() => leaveChannel(channelId, username)}
+                          src="https://cdn1.iconfinder.com/data/icons/arrows-vol-1-4/24/logout-256.png"
+                          alt=""
+                        />
+                      </div>
                     </div>
                   </li>
                 )}
@@ -310,6 +333,12 @@ export default function ChannalAndDirectMessage({
                       <p>
                         <span className="mr-2"># {channel?.name}</span>
                       </p>
+                      <img
+                        className="h-5 w-5 ml-2 bg-slate-300 rounded-xl hover:bg-red-500 hover:text-white hover:opacity-100 cursor-pointer"
+                        onClick={() => leaveChannel(channelId, username)}
+                        src="https://cdn1.iconfinder.com/data/icons/arrows-vol-1-4/24/logout-256.png"
+                        alt=""
+                      />
                     </div>
                   </li>
                 )}
@@ -330,6 +359,12 @@ export default function ChannalAndDirectMessage({
                       <p>
                         <span className="mr-2"># {channel?.name}</span>
                       </p>
+                      <img
+                        className="h-5 w-5 ml-2 bg-slate-300 rounded-xl hover:bg-red-500 hover:text-white hover:opacity-100 cursor-pointer"
+                        onClick={() => leaveChannel(channelId, username)}
+                        src="https://cdn1.iconfinder.com/data/icons/arrows-vol-1-4/24/logout-256.png"
+                        alt=""
+                      />
                     </div>
                   </li>
                 )}
@@ -350,7 +385,32 @@ export default function ChannalAndDirectMessage({
                       <p>
                         <span className="mr-2">🔒 {channel?.name}</span>
                       </p>
+
+                      <div className="flex justify-between">
+                        <img
+                          className="h-5 w-5   bg-slate-300 rounded-xl hover:bg-red-500 hover:text-white hover:opacity-100 cursor-pointer"
+                          onClick={() => removePassword(channelId, username)}
+                          src="https://cdn1.iconfinder.com/data/icons/jumpicon-basic-ui-glyph-1/32/-_Trash-Can--512.png"
+                          alt=""
+                        />
+
+                        <img
+                          className="h-5 w-5 ml-2 bg-slate-300 rounded-xl hover:bg-red-500 hover:text-white hover:opacity-100 cursor-pointer"
+                          onClick={() => changePassword(channelId, username, password)}
+                          src="https://cdn0.iconfinder.com/data/icons/it-and-ui-mixed-filled-outlines/48/change_password-256.png"
+                          alt=""
+                        />
+
+
+                        <img
+                          className="h-5 w-5 ml-2 bg-slate-300 rounded-xl hover:bg-red-500 hover:text-white hover:opacity-100 cursor-pointer"
+                          onClick={() => leaveChannel(channelId, username)}
+                          src="https://cdn1.iconfinder.com/data/icons/arrows-vol-1-4/24/logout-256.png"
+                          alt=""
+                        />
+                      </div>
                     </div>
+                    <div></div>
                   </li>
                 )}
               </React.Fragment>
@@ -402,10 +462,10 @@ export default function ChannalAndDirectMessage({
         )}
         {invite && users.length === 0 && (
           <div
-            className="absolute top-1/4 left-1/1 z-10 w-72   bg-gray-800 rounded-xl shadow-xl flex flex-col justify-center items-center
+            className="flex flex-col justify-center items-center h-16 bg-gray-800 rounded-xl border border-gray-600 m-2
               "
           >
-            <p className="text-white my-5 mb-1">no friends to invite</p>
+            <p className="text-white">no friends to invite</p>
             <button
               className="bg-red-500 hover:bg-red-700 text-white font-thin pl-4 pr-4 mb-2 py-0 rounded-full"
               onClick={() => setInvite(!invite)}
@@ -428,16 +488,7 @@ export default function ChannalAndDirectMessage({
           </span>
         </div>
         <ListUsersFriends username={username} />
-        {!isDirectMessage && (
-          <div className="absolute bottom-0 left-0 z-10 ml-5">
-            <button
-              className="bg-red-500 hover:bg-red-700 text-white text-xs font-thin pl-10 pr-10 ml-5 mb-0 py-0 rounded-full "
-              onClick={() => leaveChannel(channelId, username)}
-            >
-              logout
-            </button>
-          </div>
-        )}
+       
       </div>
     </div>
   );
