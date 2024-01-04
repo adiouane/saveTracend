@@ -18,15 +18,6 @@ export default function TopBar({
   //TODO: WSALT HNA ADD RESPONSIVE FOR FRIENDS LIST
 
 
-  const showAdminsMembers = () => {
-    // remove display none from '.adminMembers' 
-    const adminMembers = document.querySelector(".adminMembers");
-    alert(adminMembers?.classList.contains("hidden"))
-    if (adminMembers?.classList.contains("hidden"))
-      adminMembers?.classList.remove("hidden");
-    else
-      adminMembers?.classList.toggle("hidden");
-  }
 
   return (
     <>
@@ -48,31 +39,7 @@ export default function TopBar({
           </h3>
         </div>
 
-        {/* picture profile  */}
 
-        <div className="ml-auto  lg:block">
-          <div className="relative">
-            {/* megamenu profile */}
-            <div className="absolute top-0 right-0  -mt-5 flex items-center">
-              {/* <!-- drawer component --> */}
-              <button
-                onClick={() =>  showAdminsMembers()}
-                className="cursor-pointer my-2 w-5"
-                type="button"
-              >
-                <div className="flex ">
-                  <img
-                    className="h-5 w-5 bg-slate-100 rounded-sm "
-                    src="https://cdn2.iconfinder.com/data/icons/user-interface-jumpicon-line/32/-_Equaliser_Control_Panel_Setting_Adjustment_Configuration_System-256.png"
-                    alt=""
-                  />
-                </div>
-              </button>
-
-           
-            </div>
-          </div>
-        </div>
       </div>
     </>
   );

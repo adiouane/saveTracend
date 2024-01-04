@@ -328,6 +328,7 @@ export class ChatGateway {
     @MessageBody() data: { sender: string; },
     @ConnectedSocket() client: Socket,
   ) {
+    
     const channels = await this.prisma.channel.findMany({
       where: {
         visibility: 'protected',
@@ -411,6 +412,7 @@ export class ChatGateway {
     });
     if (!checkOwner) {
       console.log('you are not owner');
+      this.server.emit('removePassword', checkOwner);
       return;
     }else{
 
@@ -448,6 +450,7 @@ export class ChatGateway {
     },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log('data: ', data);
     if (!data.channelId && !data.password && !data.sender) {
       console.log('Channel not found changePassword data');
       return;
@@ -457,31 +460,57 @@ export class ChatGateway {
         username: data.sender,
       },
     });
+    
     const channel = await this.prisma.channel.findUnique({
       where: {
         id: data.channelId,
       },
     });
-    
-    // hash the password
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(data.password, salt);
-    data.password = hashedPassword;
-    const changePassword = await this.prisma.channel.update({
+
+    if (!channel || !user) {
+      console.log('channel not found');
+      return;
+    }
+
+    // check if the user is owner
+    const checkOwner = await this.prisma.channel.findFirst({
       where: {
         id: channel.id,
-      },
-      data: {
-        password: data.password,
-        user: {
-          connect: {
-            username: user.username,
-          },
-        },
+        userId: user.id,
+        role: 'owner',
       },
     });
-    this.server.emit('changePassword', changePassword);
-    return changePassword;
+    console.log('checkOwner: ', checkOwner);
+
+    if (!checkOwner) {
+      console.log('you are not owner');
+      this.server.emit('changePassword', checkOwner);
+      return;
+    }else{
+      // hash the password
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(data.password, salt);
+      data.password = hashedPassword;
+      const changePassword = await this.prisma.channel.update({
+        where: {
+          id: channel.id,
+        },
+        data: {
+          password: data.password,
+          user: {
+            connect: {
+              username: user.username,
+            },
+          },
+        },
+        select: {
+          user: true,
+        },
+      });
+      this.server.emit('changePassword', changePassword);
+      return changePassword;
+    }
+    
   }
 
   // get channel name by id
@@ -1319,6 +1348,12 @@ export class ChatGateway {
     },
     @ConnectedSocket() client: Socket,
     ) {
+      console.log('leaveChannel data: ', data);
+      if (!data.channelId && !data.sender) {
+        console.log('Channel not found leaveChannel data');
+        return;
+      }
+
       const user = await this.prisma.user.findUnique({
         where: {
           username: data.sender,
@@ -1328,7 +1363,12 @@ export class ChatGateway {
         where: {
         id: data.channelId,
       },  
-    });  
+    });
+
+    if (!channel || !user) {
+      console.log('channel or user not found');
+      return;
+    }
 
     // check if user is owner of the channel if yes delete the channel
     const checkOwner = await this.prisma.channel.findFirst({
@@ -1385,27 +1425,31 @@ export class ChatGateway {
       });  
       this.server.emit('leaveChannel', deleteChannelOwnership);
       return deleteChannelOwnership;
+    }else{
+      // TODO: 
+      //FIXME: IF THE USER IS JUST A MEMBER SO DELETE HIM FROM THE CHANNEL MEMBERSHIP
+      
+      // hanta 3rror kayn f protected hit tanraja3 ga3 li protected
+      const deleteChannelMembership = await this.prisma.channelMembership.deleteMany({
+        where: {
+          userId: user.id,
+          channelId: channel.id,
+        },  
+      });
+      console.log('deleteChannelMembership: ', deleteChannelMembership);
+
+      const deleteAcceptedChannelInvite = await this.prisma.acceptedChannelInvite.deleteMany({
+        where: {
+          userId: user.id,
+          channelId: channel.id,
+        },  
+      });
+
+      console.log('deleteAcceptedChannelInvite: ', deleteAcceptedChannelInvite);
+
+      this.server.emit('leaveChannel', deleteChannelMembership);
     }  
 
-    // ------- if user is member delete the channel from channelMembership ----
-
-     // delete the channel from the user
-     const deleteChannel = await this.prisma.channelMembership.deleteMany({
-      where: {
-        userId: user.id,
-        channelId: channel.id,
-      },  
-    });  
-
-    // delete the channel from the user
-    const deleteAcceptedChannelInvite = await this.prisma.acceptedChannelInvite.deleteMany({
-      where: {
-        userId: user.id,
-        channelId: channel.id,
-      },  
-    });  
-    
-    this.server.emit('leaveChannel', deleteChannel);
 
   }
 

@@ -28,7 +28,7 @@ export default function AdminsMembers({
   const listMembers = (channelId: string) => {
     socket.emit("getChannelById", { id: channelId });
     socket.on("getChannelById", (data: any) => {
-      if (data.visibility === "public" || data.visibility === "protected") {
+      if (data?.visibility === "public" || data?.visibility === "protected") {
         setDisableListMembers(true);
         return;
       } else {
@@ -161,12 +161,10 @@ export default function AdminsMembers({
 
   const hideAdminsMembers = () => {
     const adminMembers = document.querySelector(".adminMembers");
-    alert(adminMembers?.classList.contains("hidden") + " " + showMembersAndAdminsCmp)
     if (adminMembers?.classList.contains("hidden"))
       adminMembers?.classList.remove("hidden");
-    else
-      adminMembers?.classList.toggle("hidden");
-    
+    else adminMembers?.classList.toggle("hidden");
+
     setShowMembersAndAdmins(!showMembersAndAdminsCmp);
   };
 
@@ -176,147 +174,169 @@ export default function AdminsMembers({
         <div></div>
       ) : (
         <>
-          <div
-            className="bg-slate-900 rounded-2xl border border-gray-700 adminMembers
-    "
+          <button
+            className="absolute top-0 right-0  mt-2 mr-3 flex items-center"
+            onClick={() => hideAdminsMembers()}
           >
-            {!isDirectMessage ? (
-              <>
-                {/* admins */}
-            <button className="border text-sm p-3 max-w-20 border-gray-700 hover:bg-gray-700"
-              onClick={() => hideAdminsMembers()}
-              >
-              close
-            </button>
-                <h3 className=" font-light text-white pl-8 py-10 opacity-50">
-                  # Admins
-                </h3>
-                {admins?.map((admin, index) => (
-                  <div
-                    key={admin?.username}
-                    className="flex flex-col items-center relative w-56 mb-5
-              -ml-10 2xl:flex-row 2xl:justify-start 2xl:items-center 2xl:ml-10
-              "
+            <img
+              className="h-7 w-7 bg-slate-300 rounded-2xl border hover:bg-green-400"
+              src="https://cdn3.iconfinder.com/data/icons/basic-mobile-part-2/512/large_group-512.png"
+              alt=""
+            />
+          </button>
+          {showMembersAndAdminsCmp && (
+            <div
+              className="bg-slate-900 rounded-2xl border border-gray-700 adminMembers
+    "
+            >
+              {!isDirectMessage ? (
+                <>
+                  {/* admins */}
+                  <button
+                    className=" rounded-3xl p-3"
+                    onClick={() => hideAdminsMembers()}
                   >
                     <img
-                      src={admin?.avatarUrl}
+                      className="h-7 w-7 bg-slate-300 rounded-2xl border hover:bg-green-400"
+                      src="https://cdn3.iconfinder.com/data/icons/squared-business-financial/64/delete-cancel-512.png"
                       alt=""
-                      className="rounded-full h-14 -ml-5 "
                     />
-                    <span className="text-white font-bold  opacity-90 2xl:ml">
-                      {admin?.username}
-                    </span>
-                  </div>
-                ))}
-                {/* members */}
-                <h3 className=" font-light text-white pl-8 py-10 opacity-50">
-                  # Members
-                </h3>
-
-                {members?.map((member, index) => (
-                  <div key={member?.username} className="ml-8 w-56 mb-5">
+                  </button>
+                  <h3 className=" font-light text-white pl-8 py-10 opacity-50">
+                    # Admins
+                  </h3>
+                  {admins?.map((admin, index) => (
                     <div
-                      className="flex flex-row items-center relative 
-                  
-                "
+                      key={admin?.username}
+                      className="flex flex-col items-center relative w-56 mb-5 
+                        -ml-10 2xl:flex-row 2xl:justify-start 2xl:items-center 2xl:ml-10"
                     >
                       <img
-                        src={member?.avatarUrl}
+                        src={admin?.avatarUrl}
                         alt=""
-                        className="rounded-full h-14 "
+                        className="rounded-full h-14 -ml-5 mr-2 "
                       />
-                      <button
-                        className="border rounded-3xl text-sm p-1 ml-6 border-gray-700 hover:bg-gray-700
-                  2xl:ml-24
-                  "
-                        onClick={() => setSetting(!Setting)}
+                      <span className="text-white font-bold  opacity-90 2xl:ml">
+                        {admin?.username}
+                      </span>
+                    </div>
+                  ))}
+                  {/* members */}
+                  <h3 className=" font-light text-white pl-8 py-10 opacity-50">
+                    # Members
+                  </h3>
+
+                  {members?.map((member, index) => (
+                    <div key={member?.username} className="ml-8 w-56 mb-5">
+                      <div
+                        className="flex flex-row items-center "
                       >
                         <img
-                          className="h-7 w-7 bg-slate-300 rounded-2xl hover:bg-green-400"
-                          src="https://cdn4.iconfinder.com/data/icons/yuai-mobile-banking-vol-1/100/yuai-1-09-512.png"
+                          src={member?.avatarUrl}
                           alt=""
+                          className="rounded-full h-14 "
                         />
-                      </button>
-                    </div>
-                    <span className="text-white font-bold  opacity-90">
-                      {member?.username}
-                    </span>
-
-                    {Setting && (
-                      <div className="absolute top-0 right-72 bottom-0 bg-slate-800 w-[666px] h-[360px] rounded-lg flex flex-col items-center justify-center">
                         <button
-                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border border-gray-700 hover:bg-gray-700"
-                          onClick={() => makeAdmin(member.username, channelId)}
+                          className="border rounded-3xl text-sm p-1 ml-6 border-gray-700 hover:bg-gray-700 "
+                          onClick={() => setSetting(!Setting)}
                         >
-                          Make Admin
-                        </button>
-                        <button
-                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
-                  "
-                          onClick={() => kickMember(member.username, channelId)}
-                        >
-                          Kick User
-                        </button>
-                        <button
-                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
-                  "
-                          onClick={() => BanMember(member.username, channelId)}
-                        >
-                          Ban User
-                        </button>
-                        <button
-                          className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
-                  "
-                          onClick={() => MuteMember(member.username, channelId)}
-                        >
-                          Mute User
-                        </button>
-                        {ShowTimeMuted && !justMemebre && (
-                          <div className="flex flex-col items-center justify-center">
-                            <h6 className="text-white font-thin text-xl">
-                              <span className="text-red-500">
-                                User{" "}
-                                <span className="text-blue-400">
-                                  {" "}
-                                  {member.username}{" "}
-                                </span>
-                                is Muted{" "}
-                                <span className="text-blue-400">
-                                  {" "}
-                                  for 1 minute
-                                </span>
-                              </span>
-                            </h6>
-                          </div>
-                        )}
-                        {justMemebre && !ShowTimeMuted && (
-                          <div className="flex flex-col items-center justify-center">
-                            <h6 className="text-white font-thin text-xl">
-                              <span className="text-red-500">
-                                You Can't Mute{" "}
-                                <span className="text-blue-400">
-                                  {" "}
-                                  {member.username}{" "}
-                                </span>
-                              </span>
-                            </h6>
-                          </div>
-                        )}
-                        <button
-                          className=" mr-70 border rounded-3xl text-sm p-1 max-w-20 border-gray-700 hover:bg-gray-700 "
-                          onClick={() => close()}
-                        >
-                          close
+                          <img
+                            className="h-7 w-7 bg-slate-300 rounded-2xl hover:bg-green-400"
+                            src="https://cdn4.iconfinder.com/data/icons/yuai-mobile-banking-vol-1/100/yuai-1-09-512.png"
+                            alt=""
+                          />
                         </button>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </>
-            ) : (
-              <hr />
-            )}
-          </div>
+                      <div>
+                      <span className="text-white font-bold  opacity-90">
+                        {member?.username}
+                      </span>
+                      </div>
+
+                      {Setting && (
+                        <div className="absolute top-0 right-0 bottom-0 bg-slate-800 w-[400px] h-[810px] rounded-lg flex flex-col items-center justify-center">
+                          <button
+                            className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border border-gray-700 hover:bg-gray-700"
+                            onClick={() =>
+                              makeAdmin(member.username, channelId)
+                            }
+                          >
+                            Make Admin
+                          </button>
+                          <button
+                            className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
+                  "
+                            onClick={() =>
+                              kickMember(member.username, channelId)
+                            }
+                          >
+                            Kick User
+                          </button>
+                          <button
+                            className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
+                  "
+                            onClick={() =>
+                              BanMember(member.username, channelId)
+                            }
+                          >
+                            Ban User
+                          </button>
+                          <button
+                            className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border  border-gray-700 hover:bg-gray-700
+                  "
+                            onClick={() =>
+                              MuteMember(member.username, channelId)
+                            }
+                          >
+                            Mute User
+                          </button>
+                          {ShowTimeMuted && !justMemebre && (
+                            <div className="flex flex-col items-center justify-center">
+                              <h6 className="text-white font-thin text-xl">
+                                <span className="text-red-500">
+                                  User{" "}
+                                  <span className="text-blue-400">
+                                    {" "}
+                                    {member.username}{" "}
+                                  </span>
+                                  is Muted{" "}
+                                  <span className="text-blue-400">
+                                    {" "}
+                                    for 1 minute
+                                  </span>
+                                </span>
+                              </h6>
+                            </div>
+                          )}
+                          {justMemebre && !ShowTimeMuted && (
+                            <div className="flex flex-col items-center justify-center">
+                              <h6 className="text-white font-thin text-xl">
+                                <span className="text-red-500">
+                                  You Can't Mute{" "}
+                                  <span className="text-blue-400">
+                                    {" "}
+                                    {member.username}{" "}
+                                  </span>
+                                </span>
+                              </h6>
+                            </div>
+                          )}
+                          <button
+                            className=" mr-70 border rounded-3xl text-sm p-1 max-w-20 border-gray-700 hover:bg-gray-700 "
+                            onClick={() => close()}
+                          >
+                            close
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <hr />
+              )}
+            </div>
+          )}
         </>
       )}
     </>

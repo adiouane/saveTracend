@@ -11,7 +11,7 @@
 }
 
 .adminMembers{
-   width: 20vw !important;
+   width: 15vw !important;
    position: fixed;
    right: 0;
    height: 86vh;
@@ -21,6 +21,9 @@
    .sidemodelAM{
          display: none;
    }
+   .adminMembers{
+      width: 12vw !important;
+   }
 }
 
 @media   (max-width: 1838px) {
@@ -29,13 +32,17 @@
       width: 30% !important;
    }
 
+   
+
 }
 
 @media   (max-width: 1654px) {
    .sidemodelAM{
          display: block;
    }
-
+   .adminMembers{
+      width: 20vw !important;
+   }
  
 }
 
@@ -58,6 +65,9 @@
    .chat-content{
       width: 35vw !important;      
    }
+   .adminMembers{
+      width: 25vw !important;
+   }
 }
 
 
@@ -67,12 +77,15 @@
    .chat-content{
       width: 55vw !important;      
    }
+   .adminMembers{
+      width: 35vw !important;
+   }
 }
 
 
-   @media   (max-width: 500px) {
+   @media   (max-width: 440px) {
 
       .adminMembers{
-         max-width: 100% !important;
+         width: 50vw !important;
       }
    }

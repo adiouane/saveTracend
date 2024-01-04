@@ -9,6 +9,7 @@ import { useChannleIdStore, useChannleTypeStore } from "@/store/channelStore";
 import useUsernameStore from "@/store/usernameStore";
 import React from "react";
 import CustomAlert from "./listUsersFriends/CustomAlert";
+import { data } from "autoprefixer";
 
 export default function ChannalAndDirectMessage({
   user,
@@ -82,9 +83,21 @@ export default function ChannalAndDirectMessage({
         channelId: channelId,
         password: password,
       });
-      socket.on("saveChannelName", (data: any) => {
-        setIsAlert(!isAlert);
+      socket.on("saveChannelName", (data) => {
+        if(data.visibility === "public"){
+          setPublicChannels([...publicChannels, data] as any);
+        }else if(data.visibility === "private"){
+          setPrivateChannels([...privateChannels, data] as any);
+        }else if(data.visibility === "protected"){
+          setProtectedChannel([...protectedChannel, data] as any);
+        }else{
+          setAcceptedChannels([...acceptedChannels, data] as any);
+        }
       });
+    }
+    setIsAlert(!isAlert);
+    return () => {
+      socket.off("saveChannelName");
     }
   };
 
@@ -101,7 +114,6 @@ export default function ChannalAndDirectMessage({
       setAcceptedChannels(
         data.filter((channel: any) => channel.name !== "general")
       );
-      console.log("data", data);
     });
   };
 
@@ -192,15 +204,24 @@ export default function ChannalAndDirectMessage({
       sender: username,
     });
     socket.on("leaveChannel", (data: any) => {
-      setIslogout(!Islogout);
-      alert("you are logged out");
+      if (data === null) {
+        alert("you are not the channel owner");
+      }else{
+        setIslogout(!Islogout);
+        alert("you are logged out");
+      }
     });
+    return () => {
+      socket.off("leaveChannel");
+    }
   };
 
     //----------- remove password ----------------
     const removePassword = (channelId: any, username: any) => {
       socket.emit("removePassword", { channelId: channelId, sender: username });
       socket.on("removePassword", (data: any) => {
+        if (data?.user?.username === username) return;
+
         if (data){
           alert("password removed")
           changePassword(channelId, username, password)
@@ -208,6 +229,12 @@ export default function ChannalAndDirectMessage({
           alert("you are not the channel owner")
         }
       });
+
+      return() =>
+      {
+        socket.off("removePassword");
+        setIsChangePassword(false);
+      }
     };
 
       //----------- change password ----------------
@@ -220,19 +247,23 @@ export default function ChannalAndDirectMessage({
     }
     password = passwordInput;
     socket.emit("changePassword", { channelId: channelId, sender: username, password: password});
+   
     socket.on("changePassword", (data: any) => {
-      console.log(data);
+
       if (data){
         alert("password changed")
-      }else{
+      }
+      if (data === null){
         alert("you are not the channel owner")
       }
     });
-    setIsChangePassword(false);
-    return () => {
+  
+    return() =>
+    {
       socket.off("changePassword");
-
+      setIsChangePassword(false);
     }
+
   };
 
   useEffect(() => {
@@ -250,6 +281,11 @@ export default function ChannalAndDirectMessage({
       socket.off("listPublicChannels");
       socket.off("listProtectedChannels");
       socket.off("getChannelById");
+      socket.off("listPrivateChannels");
+      socket.off("getAllUsers");
+      socket.off("sendInviteToChannel");
+
+
     };
   }, [username, Islogout, isAlert]);
 

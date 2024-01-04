@@ -40,7 +40,7 @@ export default function CreateChannal(props : any) {
       </button>
 
       {showModal && (
-        <div className=" fixed inset-0 flex items-center justify-center z-50 ml-96">
+        <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full bg-gray-900 bg-opacity-50 z-50">
           <div className="bg-slate-800 rounded-2xl p-5 w-96">
             <span className="font-bold text-white "> Name of channel</span>
             <div className="flex items-center justify-between">
