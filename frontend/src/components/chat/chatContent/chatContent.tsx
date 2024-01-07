@@ -59,6 +59,7 @@ export default function ChatContent({
         const userData = await JSON.parse(storedUserData);
         if (!userData) return;
         const saveusername = userData.state.user?.username;
+        // setUsername(saveusername);
         setUsername(saveusername);
       } catch (error) {
         console.log("Error parsing stored data:", error);

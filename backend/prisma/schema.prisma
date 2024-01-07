@@ -34,6 +34,12 @@ model User {
   blocker                BlockedUsers[]   @relation("blocker")
   getblocked             BlockedUsers[]   @relation("Getblocked")
 
+  // -----salhi
+  gamesWon  GameHistory[] @relation("win")
+  gamesLost GameHistory[] @relation("lose")
+  games GameHistory[] @relation("user1")
+  oppenentgamesplayed GameHistory[] @relation("oppenent")
+  total_goals Int?
 }
 
 model Channel {
@@ -150,4 +156,19 @@ model BlockedUsers {
   getblockedid   String
   blocker    User     @relation("blocker", fields: [blockerUser], references: [id])
   getblocked  User     @relation("Getblocked", fields: [getblockedid], references: [id])
+}
+
+// -----salhi
+model GameHistory {
+  id       String    @unique @id @default(uuid()) 
+  userId  String
+  user    User   @relation("user1", fields: [userId], references: [id])
+  oppenentId  String
+  oppenent    User   @relation("oppenent", fields: [oppenentId], references: [id])
+  winnerId String
+  winner   User   @relation("win", fields: [winnerId], references: [id])
+  loserId  String
+  loser    User   @relation("lose", fields: [loserId], references: [id])
+  user_score Int
+  opp_score Int
 }

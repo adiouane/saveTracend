@@ -4,6 +4,7 @@ import {
   MessageBody,
   WebSocketServer,
   ConnectedSocket,
+  OnGatewayDisconnect
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -13,24 +14,53 @@ import { notificationService } from './notification.service';
 import { emit } from 'process';
 import * as bcrypt from 'bcrypt';
 import { channel } from 'diagnostics_channel';
-
+import  GameQueue  from '../game/gamequeue';
+import  GameRoom  from '../game/gameroom';
+import { User } from '@prisma/client';
 
 @WebSocketGateway({
   cors: {
     origin: '*',
   },
 })
-export class ChatGateway {
+
+export class ChatGateway implements OnGatewayDisconnect{
   @WebSocketServer()
   server: Server;
-
+  private queue: GameQueue;
+  private room: GameRoom;
+  
   constructor(
     private readonly directMessageService: directMessageService,
     private readonly channelService: channelService,
     private readonly prisma: PrismaService,
     private readonly notificationService: notificationService,
-  ) { }
-
+    ) {
+      this.queue = new GameQueue();
+      this.room = new GameRoom(prisma);
+     }
+    
+    
+    
+    @SubscribeMessage('AddUserToRoom')
+    handlequeue(client: Socket, user: User): void {
+      const match = this.queue.addPlayerToQueue(client, user);
+      if (match){
+        this.queue.emptyplayers();
+        this.room.startgame(match);
+      }
+    }
+    
+    @SubscribeMessage('dataofmouse')
+    handlemouse(client: Socket, position: number): void {
+      this.room.setmouseposition(client, position);
+    }
+    
+    handleDisconnect(clinet: Socket){
+      console.log("hereeeeee\n");
+      this.queue.userquit(clinet);
+      this.room.userdisconnect(clinet);
+    }
   // Join a specific channel room
   @SubscribeMessage('joinChannel')
   async joinChannel(
@@ -620,11 +650,13 @@ export class ChatGateway {
       channelId: string;
     },
   ) {
-    if (!data.sender && !data.member && !data.channelId) {
+    console.log('makeAdmin data: ', data);
+    if (!data.sender || !data.member || !data.channelId) {
       console.log('Channel not found makeAdmin data');
       return;
     }else if (data.sender === data.member) {
       console.log('you can not make your self admin');
+      this.server.emit('makeAdmin', "you can not make your self admin");
       return;
     }
 
@@ -634,11 +666,17 @@ export class ChatGateway {
         id: data.channelId,
       },
     });
+
+    const user = await this.prisma.user.findUnique({
+      where: {
+        username: data.member,
+      },
+    });
     
     // check if the user is owner
     const owner = await this.prisma.user.findUnique({
       where: {
-        username: data.sender,
+        username: user.username,
       },
     });
 
@@ -769,11 +807,12 @@ export class ChatGateway {
     },
   ) {
     console.log('kickMember data: ', data);
-    if (!data.sender && !data.member && !data.channelId) {
+    if (!data.sender || !data.member || !data.channelId) {
       console.log('Channel not found kickMember data');
       return;
     }else if (data.sender === data.member) {
       console.log('you can not kick your self');
+      this.server.emit('kickMember', "you can not kick your self");
       return;
     }
     // a owner can kick an admin or a member
@@ -951,11 +990,13 @@ export class ChatGateway {
       channelId: string;
     },
   ){
-    if (!data.sender && !data.member && !data.channelId) {
+    console.log('BanMember data: ', data);
+    if (!data.sender || !data.member || !data.channelId) {
       console.log('Channel not found BanMember data');
       return;
     }else if (data.sender === data.member) {
       console.log('you can not ban your self');
+      this.server.emit('BanMember', "you can not ban your self");
       return;
     }
     // a owner can ban an admin or a member
@@ -971,7 +1012,7 @@ export class ChatGateway {
     });
 
     if (!member) {
-      console.log('member not found', data.sender);
+      console.log('member not found1', data.sender);
       return;
     }
 
@@ -1052,18 +1093,30 @@ export class ChatGateway {
           username: data.member,
         },
       });
+      console.log('member2: ', member2);
   
       const checkMember2 = await this.prisma.channelMembership.findFirst({
         where: {
-          channelId: data.channelId,
-          userId: member2.id,
-          roleId: 'member',
+          OR: [
+            {
+              channelId: data.channelId,
+              userId: member2.id,
+              roleId: 'member',
+            },
+            {
+              channelId: data.channelId,
+              userId: member2.id,
+              roleId: 'admin',
+              isAdmin: true,
+            },
+          ],
+          
         },
       });
   
       if (!checkMember2)
         {
-          console.log('member not found', checkMember2);
+          console.log('member not found2', checkMember2);
           this.server.emit('BanMember', checkMember2);
           return;
         }
@@ -1087,7 +1140,6 @@ export class ChatGateway {
   }
 
 
-  // // muteMember for a specific time
   @SubscribeMessage('MuteMember')
   async MuteMember(
     @MessageBody()
@@ -1098,11 +1150,13 @@ export class ChatGateway {
       Muted: boolean;
     },
   ) {
-    if (!data.sender && !data.member && !data.channelId) {
+    console.log('MuteMember data: ', data);
+    if (!data.sender || !data.member || !data.channelId) {
       console.log('Channel not found MuteMember data');
       return;
     }else if (data.sender === data.member) {
       console.log('you can not mute your self');
+      this.server.emit('MuteMember', "you can not mute your self");
       return;
     }
 
@@ -1114,7 +1168,7 @@ export class ChatGateway {
     });
 
     if (!member) {
-      console.log('member not found', member);
+      console.log('member not found1', member);
       return;
     }
 
@@ -1169,6 +1223,7 @@ export class ChatGateway {
 
       if (!checkMember) {
         console.log('you can not mute an admin or owner');
+        this.server.emit('MuteMember', "you can not mute an admin or owner");
         return;
       }
 
@@ -1184,21 +1239,19 @@ export class ChatGateway {
 
         this.server.emit('MuteMember', "admin muted member");
         return isMutedMember;
+      }else{
+        const MutedMember = await this.prisma.channelMembership.update({
+          where: {
+            id: checkMember.id,
+          },
+          data: {
+            isMuted: true,
+          },
+        });
+        this.server.emit('MuteMember', MutedMember);
+        return MutedMember;
       }
       
-      const MutedMember = await this.prisma.channelMembership.update({
-        where: {
-          id: checkMember.id,
-        },
-        data: {
-          isMuted: true,
-        },
-      });
-
-
-      this.server.emit('MuteMember', MutedMember);
-      return MutedMember;
-
     }else{
       // so the sender is an owner
   
@@ -1212,14 +1265,24 @@ export class ChatGateway {
   
       const checkMember2 = await this.prisma.channelMembership.findFirst({
         where: {
-          channelId: data.channelId,
-          userId: member2.id,
-          roleId: 'member',
+          OR: [
+            {
+              channelId: data.channelId,
+              userId: member2.id,
+              roleId: 'member',
+            },
+            {
+              channelId: data.channelId,
+              userId: member2.id,
+              roleId: 'admin',
+            },
+          ],
+          
         },
       });
   
       if (!checkMember2){
-        console.log('member not found', checkMember2);
+        console.log('member not found2', checkMember2);
         return;
       }
   
@@ -1234,6 +1297,7 @@ export class ChatGateway {
         });
   
         this.server.emit('MuteMember', isMutedMember2);
+        console.log('isMutedMember3: ', isMutedMember2);
         return isMutedMember2;
       }
   
@@ -1248,14 +1312,10 @@ export class ChatGateway {
   
       });
   
-  
       this.server.emit('MuteMember', "owner muted member");
-  
+      console.log('muteMember2: ', muteMember2);
       return muteMember2;
-
     }
-
-
   }
 
 
@@ -1425,32 +1485,9 @@ export class ChatGateway {
       });  
       this.server.emit('leaveChannel', deleteChannelOwnership);
       return deleteChannelOwnership;
-    }else{
+    }
       // TODO: 
       //FIXME: IF THE USER IS JUST A MEMBER SO DELETE HIM FROM THE CHANNEL MEMBERSHIP
-      
-      // hanta 3rror kayn f protected hit tanraja3 ga3 li protected
-      const deleteChannelMembership = await this.prisma.channelMembership.deleteMany({
-        where: {
-          userId: user.id,
-          channelId: channel.id,
-        },  
-      });
-      console.log('deleteChannelMembership: ', deleteChannelMembership);
-
-      const deleteAcceptedChannelInvite = await this.prisma.acceptedChannelInvite.deleteMany({
-        where: {
-          userId: user.id,
-          channelId: channel.id,
-        },  
-      });
-
-      console.log('deleteAcceptedChannelInvite: ', deleteAcceptedChannelInvite);
-
-      this.server.emit('leaveChannel', deleteChannelMembership);
-    }  
-
-
   }
 
   //------------------------end channel------------------------
