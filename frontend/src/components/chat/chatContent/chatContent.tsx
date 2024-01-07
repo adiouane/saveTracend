@@ -3,12 +3,13 @@ import "./chatContent.css";
 
 import TopBar from "./topbar/topbar";
 
-import { useEffect, useRef } from "react";
+import { use, useEffect, useRef } from "react";
 import { useState } from "react";
 import socket from "@services/socket";
 import { useIsDirectMessage } from "@/store/userStore";
 import useRecieverStore from "@/store/recieverStore";
 import useUsernameStore from "@/store/usernameStore";
+import { data } from "autoprefixer";
 
 type User = {
   username: string;
@@ -50,6 +51,7 @@ export default function ChatContent({
   const [arrayBlockedUsers, setArrayBlockedUsers] = useState<any>([]);
   const [blockerUsername, setBlockerUsername] = useState<any>([]);
   const [getblockedid, setGetblockedid] = useState<any>([]);
+  const [newFriend, setNewFriend] = useState(false);
   // const [isChangePassword, setIsChangePassword] = useState(false);
 
   async function fetchUsername() {
@@ -279,6 +281,7 @@ export default function ChatContent({
           return;
         }
         if (youAreBaned && channel !== "general") {
+          console.log("you are baned");
           // set a default message to show that you are baned
           let banedMessage = {
             user: {
@@ -295,6 +298,7 @@ export default function ChatContent({
           return;
         } else if (isMuted && channel !== "general") {
           // set a default message to show that you are muted
+          console.log("you are muted");
           let muteMessage = {
             user: {
               username: "muted user",
@@ -364,6 +368,7 @@ export default function ChatContent({
         reciever: reciever,
       });
       socket.on("listDirectMessages", (data) => {
+        console.log("data", data);
         if (
           (Array.isArray(data.msg) &&
             username === data.msg[0]?.receiver.username) ||
@@ -389,16 +394,15 @@ export default function ChatContent({
       channelId: channelId,
     });
     socket.on("checkIfTheUserIsBaned", (data) => {
-      if (
-        data &&
-        data?.user?.username === username &&
-        data?.channel?.name === channel &&
-        data?.isBanned === true
-      ) {
+    if (data && data?.user?.username === username && data?.isBanned === true) {
         setYouAreBaned(true);
-      } else {
-        setYouAreBaned(false);
+        console.log("yes you are baned")
       }
+    else {
+        setYouAreBaned(false);
+        console.log("no you are not baned")
+    }
+    console.log(youAreBaned)
     });
   };
 
@@ -409,7 +413,7 @@ export default function ChatContent({
       channelId: channelId,
     });
     socket.on("checkIfTheUserIsMuted", (data: any) => {
-      if (data?.isMuted) {
+      if (data?.isMuted === true && data?.user?.username === username) {
         setIsMuted(true);
       } else {
         setIsMuted(false);
@@ -418,24 +422,19 @@ export default function ChatContent({
   };
 
   useEffect(() => {
-    // handle online/offline status
-    socket.emit("onlineStatus", { username: username, status: "online" });
-    // if user click on close tab or change the url set the status to offline
-    window.addEventListener("beforeunload", () => {
-      socket.emit("onlineStatus", { username: username, status: "offline" });
-    });
+    // // handle online/offline status
+    // socket.emit("onlineStatus", { username: username, status: "online" });
+    // // if user click on close tab or change the url set the status to offline
+    // window.addEventListener("beforeunload", () => {
+    //   socket.emit("onlineStatus", { username: username, status: "offline" });
+    // });
 
-    if (isDirectMessage) {
-      handlelistDirectMessages();
-    } else {
-      GetBlockedUsers();
-      checkIfTheUserIsBaned();
-      checkIfTheUserIsMuted();
-      handlelistChannelMessages();
-    }
-
+    GetBlockedUsers();
+    checkIfTheUserIsBaned();
+    checkIfTheUserIsMuted();
+    handlelistChannelMessages();
+    
     return () => {
-      socket.off("listDirectMessages");
       socket.off("listChannelMessages");
       socket.off("onlineStatus");
       socket.off("checkIfTheUserIsBaned");
@@ -459,56 +458,24 @@ export default function ChatContent({
     youAreBaned,
   ]);
 
+  useEffect(() => {
 
-  // //----------- remove password ----------------
-  // const removePassword = (channelId: any, username: any) => {
-  //   socket.emit("removePassword", { channelId: channelId, sender: username });
-  //   socket.on("removePassword", (data: any) => {
-  //     console.log(data);
-  //     if (data){
-  //       alert("password removed")
-  //       changePassword(channelId, username, password);
-  //       console.log("password removed");
-  //       return;
+      socket.emit("onlineStatus", { username: user?.username, status: "online" });
+      // if user click on close tab or change the url set the status to offline
+      window.addEventListener("beforeunload", () => {
+        socket.emit("onlineStatus", { username: user?.username, status: "offline" });
+      });
+      setArrayMessages([]);
+      handlelistDirectMessages();
+      console.log("reciever", reciever)
+      return () => {
+        socket.off("listDirectMessages");
+      };
+  }, [reciever]);
 
-  //     }else{
-  //       alert("you are not the channel owner")
-  //       return;
-  //     }
-  //   });
-  //   setPassword("");
-  //   return () => {
-  //     socket.off("removePassword");
-  //   }
-  //   // clr the password input
-  // };
-
-  // //----------- change password ----------------
-  // const changePassword = (channelId: string, username: string, password: string) => {
-  //   // take input from the user and send it to the server using html input aler box
-
-  //   const passwordInput = prompt("Please enter your new password");
-  //   if (passwordInput === null || passwordInput === "") {
-  //     return;
-  //   }
-  //   password = passwordInput;
-  //   socket.emit("changePassword", { channelId: channelId, sender: username, password: password});
-  //   socket.on("changePassword", (data: any) => {
-  //     console.log(data);
-  //     if (data){
-  //       alert("password changed")
-  //     }else{
-  //       alert("you are not the channel owner")
-  //     }
-  //   });
-  //   setIsChangePassword(false);
-  //   return () => {
-  //     socket.off("changePassword");
-
-  //   }
-  // };
-  
-
+  const handleNewFriend = () => {
+    setNewFriend(!newFriend);
+  }
 
   return (
     <div className="chat-content flex-1 flex flex-col overflow-hidden rounded-3xl shadow border border-gray-800 ">
@@ -523,20 +490,20 @@ export default function ChatContent({
             <div>
               {arrayMessages.map((message: any, index: number) => (
                 <div key={index} className="flex flex-col mb-4 text-sm">
-                  <div className="flex items-center">
+                  <div className="flex items-center"
+                  onClick={() => handleNewFriend()}
+                  >
                     <img
                       src={message.sender.avatarUrl} // Assuming sender has an avatarUrl property
                       className="w-10 h-10 rounded-full mr-3"
                       alt={`Avatar of ${message.sender.username}`}
                     />
-                    <span className="font-bold text-white">
+                    <p className="font-bold text-white">
                       {message.sender.username}
-                    </span>
+                    </p>
                   </div>
-                  <p className="text-white font-sans px-14">
-                    <span className="text-white font-sans">
+                    <p className="text-white font-sans px-14">
                       {message.message}
-                    </span>
                   </p>
                 </div>
               ))}
@@ -588,46 +555,14 @@ export default function ChatContent({
                       Enter
                     </button>
                   </div>
-                  {/* <div className="flex ">
-                    <button
-                      type="button"
-                      className="h-10 px-5 m-2 font-sans hover:font-semibold text-gray-100 transition-colors duration-150 bg-gray-700 rounded-lg focus:shadow-outline hover:bg-gray-800"
-                    onClick={() => removePassword(channelId, username)}
-                   >
-                      Remove Password
-                    </button>
-                    <button
-                      type="button"
-                      className="h-10 px-5 m-2 text-gray-100 font-sans hover:font-semibold transition-colors duration-150 bg-gray-700 rounded-lg focus:shadow-outline hover:bg-gray-800"
-                      onClick={() => changePassword(channelId, username, password)}
-                    >
-                      Change Password
-                    </button>
-                   
-                  </div> */}
+
                   {showWrongPassword && (
                     <div>
-                      <span className="text-red-500 font-bold ml-2">
+                      <p className="text-red-500 font-bold ml-2">
                         wrong password
-                      </span>
+                      </p>
                     </div>
                   )}
-                   {/* {
-                      isChangePassword && (
-                        <div className="flex items-center justify-between">
-                          <input
-                            type="text"
-                            name="password"
-                            placeholder="Enter new password ..."
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            onKeyDown={()=> changePassword(channelId, username, password)}
-                            className="bg-slate-900 w-full my-5 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-800"
-                          />
-                        </div>
-                      )
-
-                    } */}
                 </div>
               </div>
             )}
@@ -639,15 +574,13 @@ export default function ChatContent({
                       src={message.user?.avatarUrl}
                       className="w-10 h-10 rounded-full mr-3"
                     />
-                    <span className="font-bold text-white">
+                    <p className="font-bold text-white">
                       {message.user?.username}
-                    </span>
+                    </p>
                   </div>
-                  <p className="text-white font-sans px-14">
-                    <span className="text-white font-sans ">
+                    <p className="text-white font-sans px-14">
                       {message.message}
-                    </span>
-                  </p>
+                    </p>
                 </div>
               ))}
             {!isProtected &&
@@ -658,14 +591,12 @@ export default function ChatContent({
                       src={message.user?.avatarUrl}
                       className="w-10 h-10 rounded-full mr-3"
                     />
-                    <span className="font-bold text-white">
+                    <p className="font-bold text-white">
                       {message.user?.username}
-                    </span>
+                    </p>
                   </div>
-                  <p className="text-white font-sans px-14">
-                    <span className="text-white font-sans ">
+                    <p className="text-white font-sans px-14">
                       {message.message}
-                    </span>
                   </p>
                 </div>
               ))}

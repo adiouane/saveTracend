@@ -25,7 +25,7 @@ export default function AdminsMembers({
   const [disableListMembers, setDisableListMembers] = useState<boolean>(false);
   const [showMembersAndAdminsCmp, setShowMembersAndAdmins] =
     useState<boolean>(false);
-    const { username, setUsername } = useUsernameStore();
+  const { username, setUsername } = useUsernameStore();
   const [annoncement, setAnnoncement] = useState("");
   const [Muted, setMuted] = useState<boolean>(false);
 
@@ -38,8 +38,6 @@ export default function AdminsMembers({
         setDisableListMembers(true);
         return;
       } else {
-        // setMembers([]);
-        // setAdmins([]);
         
         socket.emit("ChannelMembers", { channelId, username });
         socket.on("ChannelMembers", (data: any) => {
@@ -59,8 +57,7 @@ export default function AdminsMembers({
   // TODO: 3ANDI NAFS ADMIN F 2 DIFFERENT CLIENTS
   
   const listAdmins = (channelId: string) => {
-    // setMembers([]);
-    // setAdmins([]);
+
     // list all admins in the channel
     socket.emit("GetChannelAdmins", { channelId });
     socket.on("GetChannelAdmins", (data: any) => {
@@ -80,8 +77,6 @@ export default function AdminsMembers({
   // list all members in the channel
   useEffect(() => {
     if (channelId) {
-      // setMembers([]);
-      // setAdmins([]);
       listAdmins(channelId);
       listMembers(channelId);
     }
@@ -91,9 +86,6 @@ export default function AdminsMembers({
       socket.off("getUserById");
       socket.off("getChannelById");
       socket.off("GetChannelAdmins");
-
-      // setMembers([]);
-      // setAdmins([]);
       setDisableListMembers(false);
     };
   }, [channelId]);
@@ -158,34 +150,35 @@ export default function AdminsMembers({
       socket.off("BanMember");
     }
   };
-  //TODO: MUTE IS CUASE INFINIT LOOP
 
-  const timeToUnmute = () => {
+  const wait = (duration : any) => new Promise(resolve => setTimeout(resolve, duration));
+
+
+  const timeToUnmute = async () => {
     const muteDuration = 20 * 1000; // 20 seconds
-    setTimeout(() => {
-      setMuted(true);
-      socket.emit("MuteMember", { sender, member, channelId, Muted });
-      setAnnoncement("user " + member + " has been unmuted");
-    }, muteDuration);
+    const sender = username; // set same samiya for backend
     
+    // Wait for the specified duration
+    await wait(muteDuration);
+  
+    
+    // setMuted(true);
+    const Muted = true;
+    console.log("member", member, "unmuted by", sender, "in channel", channelId, "muted", Muted);
+    socket.emit("MuteMember", { sender, member, channelId, Muted });
+    setAnnoncement("member " + member + " has been unmuted");
   };
 
   const MuteMember = ( channelId: string) => {
 
-    const muteDuration = 20 * 1000; // 20 seconds
-    // const unmuteTime = new Date().getTime() + muteDuration;
-        
-    // Emit a socket event to the server to mute the member
-    console.log("user ", username, "muted member ", member, "in channel ", channelId)
     if (!username || !member || !channelId) return;
     const sender = username; // set same samiya for backend
     socket.emit("MuteMember", { sender, member, channelId, Muted });
     socket.on("MuteMember", (data: any) => {
-      // console.log("data", data)
       if (data === "owner muted member") {
         setShowTimeMuted(!ShowTimeMuted);
         listMembers(channelId);
-        setAnnoncement("user " + member + " muted for 20 seconds");
+        setAnnoncement("member " + member + " muted for 20 seconds");
         timeToUnmute();
       } else if (data === "admin muted member") {
         setShowTimeMuted(!ShowTimeMuted);
@@ -193,7 +186,6 @@ export default function AdminsMembers({
         setAnnoncement("admin muted member");
         timeToUnmute();
       }else if (data === "you can not mute an admin or owner"){
-        console.log(data)
         setAnnoncement("you can not mute an admin or owner");
         return;
       }
@@ -254,7 +246,7 @@ export default function AdminsMembers({
           </button>
           {showMembersAndAdminsCmp && (
             <div
-              className="bg-slate-900 rounded-2xl border border-gray-700 adminMembers
+              className="bg-slate-900 rounded-2xl border border-gray-700  adminMembers
     "
             >
               {!isDirectMessage ? (
@@ -322,7 +314,7 @@ export default function AdminsMembers({
                       </div>
 
                       {Setting && (
-                        <div className="absolute top-0 right-0 bottom-0 bg-slate-800 w-[400px] h-[810px] rounded-lg flex flex-col items-center justify-center">
+                        <div className="absolute top-0 right-0 bottom-0 bg-gradient-to-l from-gray-900 via-slate-900 to-slate-800 w-[400px] h-[825px] rounded-lg flex flex-col items-center justify-center">
                           <button
                             className="bg-slate-900 text-white rounded-lg px-4 py-2 my-2 mb-2 w-96 font-sans border border-gray-700 hover:bg-gray-700"
                             onClick={() =>
@@ -358,40 +350,9 @@ export default function AdminsMembers({
                           >
                             Mute User
                           </button>
-                          {/* {ShowTimeMuted && !justMemebre && (
-                            <div className="flex flex-col items-center justify-center">
-                              <h6 className="text-white font-thin text-xl">
-                                <span className="text-red-500">
-                                  User{" "}
-                                  <span className="text-blue-400">
-                                    {" "}
-                                    {member.username}{" "}
-                                  </span>
-                                  is Muted{" "}
-                                  <span className="text-blue-400">
-                                    {" "}
-                                    for 1 minute
-                                  </span>
-                                </span>
-                              </h6>
-                            </div>
-                          )} */}
-                          {/* {justMemebre && !ShowTimeMuted && (
-                            <div className="flex flex-col items-center justify-center">
-                              <h6 className="text-white font-thin text-xl">
-                                <span className="text-red-500">
-                                  You Can't Mute{" "}
-                                  <span className="text-blue-400">
-                                    {" "}
-                                    {member.username}{" "}
-                                  </span>
-                                </span>
-                              </h6>
-                            </div>
-                          )} */}
                           
                             <div className="flex flex-col items-center justify-center">
-                              <h6 className="text-white font-thin text-xl">
+                              <h6 className="text-white font-thin text-base">
                                 <span className="text-red-500">
                                   {annoncement}
                                 </span>

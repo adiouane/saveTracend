@@ -41,26 +41,26 @@ export class ChatGateway implements OnGatewayDisconnect{
      }
     
     
-    
-    @SubscribeMessage('AddUserToRoom')
-    handlequeue(client: Socket, user: User): void {
-      const match = this.queue.addPlayerToQueue(client, user);
-      if (match){
-        this.queue.emptyplayers();
-        this.room.startgame(match);
-      }
+  
+  @SubscribeMessage('AddUserToRoom')
+  handlequeue(client: Socket, user: User): void {
+    const match = this.queue.addPlayerToQueue(client, user);
+    if (match){
+      this.queue.emptyplayers();
+      this.room.startgame(match);
     }
-    
-    @SubscribeMessage('dataofmouse')
-    handlemouse(client: Socket, position: number): void {
-      this.room.setmouseposition(client, position);
-    }
-    
-    handleDisconnect(clinet: Socket){
-      console.log("hereeeeee\n");
-      this.queue.userquit(clinet);
-      this.room.userdisconnect(clinet);
-    }
+  }
+  
+  @SubscribeMessage('dataofmouse')
+  handlemouse(client: Socket, position: number): void {
+    this.room.setmouseposition(client, position);
+  }
+  
+  handleDisconnect(clinet: Socket){
+    this.queue.userquit(clinet);
+    this.room.userdisconnect(clinet);
+  }
+
   // Join a specific channel room
   @SubscribeMessage('joinChannel')
   async joinChannel(
@@ -1237,7 +1237,7 @@ export class ChatGateway implements OnGatewayDisconnect{
           },
         });
 
-        this.server.emit('MuteMember', "admin muted member");
+        this.server.emit('MuteMember', isMutedMember);
         return isMutedMember;
       }else{
         const MutedMember = await this.prisma.channelMembership.update({
@@ -1287,6 +1287,7 @@ export class ChatGateway implements OnGatewayDisconnect{
       }
   
       if (data.Muted) {
+        console.log("muted is true")
         const isMutedMember2 = await this.prisma.channelMembership.update({
           where: {
             id: checkMember2.id,
